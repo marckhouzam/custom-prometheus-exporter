@@ -1,5 +1,4 @@
-exporters:
-  docker-exporter:
+  - name: docker-exporter
     port: 9555
     endpoint: /metrics
     metrics:
