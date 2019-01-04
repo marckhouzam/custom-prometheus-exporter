@@ -49,19 +49,37 @@ func handleRootEndpoint(name string, endpoint string) func(http.ResponseWriter, 
 // CreateExporters instantiates each exporter as requested
 // in the configuration
 func CreateExporters(exportersConf []configparser.ExporterConfig) {
-	for _, exporter := range exportersConf {
+
+	var wg sync.WaitGroup
+	for _, e := range exportersConf {
+		exporter := e
 		metricsCollector := MetricsCollector{}
 		metricsCollector.AddMetrics(exporter.Metrics)
 
-		prometheus.MustRegister(&metricsCollector)
+		// Don't use the default registry to avoid getting the go collector
+		// and all its metrics
+		registry := prometheus.NewRegistry()
+		registry.MustRegister(&metricsCollector)
 
-		// The Handler function provides a default handler to expose metrics
-		// via an HTTP server.
-		http.Handle(fmt.Sprintf("%s", exporter.Endpoint), promhttp.Handler())
-		http.HandleFunc("/", handleRootEndpoint(exporter.Name, exporter.Endpoint))
-		log.Println("Listening on port", exporter.Port, "and endpoint", exporter.Endpoint)
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", exporter.Port), nil))
+		// Don't block, since we can run multiple exporters.
+		// Increment the WaitGroup counter.
+		wg.Add(1)
+		go func() {
+			// Decrement the counter when the goroutine completes.
+			defer wg.Done()
+
+			handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
+
+			server := http.NewServeMux()
+			server.Handle(fmt.Sprintf("%s", exporter.Endpoint), handler)
+			server.HandleFunc("/", handleRootEndpoint(exporter.Name, exporter.Endpoint))
+			log.Println("Listening on port", exporter.Port, "and endpoint", exporter.Endpoint)
+			log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", exporter.Port), server))
+		}()
 	}
+
+	// Wait for all Exporters to complete.
+	wg.Wait()
 }
 
 // AddMetrics defines the metrics that will be provided
