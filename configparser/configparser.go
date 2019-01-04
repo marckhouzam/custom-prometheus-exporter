@@ -1,7 +1,6 @@
 package configparser
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -13,24 +12,30 @@ import (
 type Config struct {
 	// The directory path where the config files can be found
 	ConfigDir string
-	exporters []exporter
+	// An array of defined exporters
+	Exporters []ExporterConfig
 }
 
-type exporter struct {
+// ExporterConfig is the structure that contains the information about each defined
+// exporter that will be instantiated
+type ExporterConfig struct {
 	// All fields below must be exported (start with a capital letter)
 	// so that the yaml.UnmarshalStrict() method can set them.
 	Name     string
 	Port     int
 	Endpoint string
-	Metrics  []struct {
-		Name       string
-		Help       string
-		MetricType string `yaml:"type"`
-		Execution  []struct {
-			ExecutionType string `yaml:"type"`
-			Command       string
-			Labels        map[string]string
-		}
+	Metrics  []MetricsConfig
+}
+
+// MetricsConfig -
+type MetricsConfig struct {
+	Name       string
+	Help       string
+	MetricType string `yaml:"type"`
+	Executions []struct {
+		ExecutionType string `yaml:"type"`
+		Command       string
+		Labels        map[string]string
 	}
 }
 
@@ -62,15 +67,14 @@ func (c *Config) ParseConfig() error {
 		}
 
 		// Now parse the yaml directly into our data structure
-		exporters := []exporter{}
+		exporters := []ExporterConfig{}
 		err = yaml.UnmarshalStrict(data, &exporters)
 		if err != nil {
 			return err
 		}
 		// Add the new exporters to the final array of exporters
-		c.exporters = append(c.exporters, exporters...)
+		c.Exporters = append(c.Exporters, exporters...)
 	}
 
-	fmt.Println("The final config is", c.exporters)
 	return nil
 }

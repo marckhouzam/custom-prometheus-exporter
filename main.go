@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/marckhouzam/custom-prometheus-exporter/configparser"
+	"github.com/marckhouzam/custom-prometheus-exporter/exporter"
 )
 
 var (
@@ -36,4 +37,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Error parsing configuration within ", configDirPath, ": ", err)
 	}
+	fmt.Println("The final config is", config.Exporters)
+
+	exporter.CreateExporters(config.Exporters)
 }

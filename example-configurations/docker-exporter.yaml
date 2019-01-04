@@ -5,7 +5,7 @@
     - name: docker_container_states_containers
       help: The count of containers in various states
       type: gauge
-      execution:
+      executions:
       - type: sh
         command: docker info --format '{{ .ContainersRunning }}'
         labels:
@@ -13,7 +13,7 @@
       - type: sh
         command: docker info --format '{{ .ContainersStopped }}'
         labels:
-          state: Paused
+          state: Stopped
       - type: sh
         command: docker info --format '{{ .ContainersPaused }}'
         labels:
@@ -21,7 +21,7 @@
     - name: docker_image_types_images
       help: The count of images of various types
       type: gauge
-      execution:
+      executions:
       - type: sh
         command: docker images --quiet --filter dangling=true | wc -l
         labels:

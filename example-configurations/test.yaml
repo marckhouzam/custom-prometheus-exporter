@@ -5,7 +5,7 @@
     - name: test_gauge_values
       help: Some values
       type: gauge
-      execution:
+      executions:
       - type: sh
         command: expr 111
         labels:
@@ -21,7 +21,7 @@
     - name: test_gauce_other_values
       help: Other values
       type: gauge
-      execution:
+      executions:
       - type: sh
         command: echo 1234 | wc -c
         labels:
