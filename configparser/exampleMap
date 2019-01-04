@@ -1,0 +1,76 @@
+map[
+	exporters: map[
+		docker-exporter: map[
+			port:9555
+			endpoint:/metrics
+			metrics:[
+				map[
+					name: docker_container_states_containers
+					help: The count of containers in various states execution:
+					[
+						map[
+							type:sh
+							command:docker info --format '{{ .ContainersRunning }}'
+							labels:[
+								map[
+									state:Running
+									]
+							]
+						]
+						map[
+							labels:[
+								map[
+									state:Paused
+									]
+								]
+							type:sh
+							command:docker info --format '{{ .ContainersStopped }}'
+						]
+						map[
+							type:sh
+							command:docker info --format '{{ .ContainersPaused }}'
+							labels:[
+								map[
+									state:Paused
+								]
+							]
+						]
+					]
+				]
+				map[
+					name:docker_image_types_images
+					help:The count of images of various types execution:
+					[
+						map[
+							labels:[
+								map[
+									type:dangling
+								]
+							]
+							type:sh
+							command:docker images --quiet --filter dangling=true | wc -l
+						]
+						map[
+							type:sh
+							command:docker images --quiet | wc -l
+							labels:[
+								map[
+									type:top-level
+								]
+							]
+						]
+						map[
+							type:sh
+							command:docker images --all --quiet | wc -l
+							labels:[
+								map[
+									type:intermediate
+								]
+							]
+						]
+					]
+				]
+			]
+		]
+	]
+]

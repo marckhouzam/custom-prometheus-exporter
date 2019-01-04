@@ -1,0 +1,37 @@
+exporters:
+  docker-exporter:
+    port: 9555
+    endpoint: /metrics
+    metrics:
+    - name: docker_container_states_containers
+      help: The count of containers in various states
+      type: gauge
+      execution:
+      - type: sh
+        command: docker info --format '{{ .ContainersRunning }}'
+        labels:
+          state: Running
+      - type: sh
+        command: docker info --format '{{ .ContainersStopped }}'
+        labels:
+          state: Paused
+      - type: sh
+        command: docker info --format '{{ .ContainersPaused }}'
+        labels:
+          state: Paused
+    - name: docker_image_types_images
+      help: The count of images of various types
+      type: gauge
+      execution:
+      - type: sh
+        command: docker images --quiet --filter dangling=true | wc -l
+        labels:
+          type: dangling
+      - type: sh
+        command: docker images --quiet | wc -l
+        labels:
+          type: top-level
+      - type: sh
+        command: expr `docker images --all --quiet | wc -l` - `docker images --quiet | wc -l`
+        labels:
+          type: intermediate

@@ -1,0 +1,18 @@
+{
+  "name": "custom-prometheus-exporter",
+  "version": "0.1.0",
+  "description": "YAML-configurable Custom Prometheus exporter",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/marckhouzam/custom-prometheus-exporter.git"
+  },
+  "keywords": [
+    "prometheus",
+    "exporter",
+    "metrics"
+  ],
+  "author": "Marc Khouzam",
+  "email": "marc.khouzam@gmail.com",
+  "license": "MIT",
+  "homepage": "https://github.com/marckhouzam/custom-prometheus-exporter"
+}
