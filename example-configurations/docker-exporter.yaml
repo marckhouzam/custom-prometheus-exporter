@@ -1,5 +1,5 @@
   - name: docker-exporter
-    port: 9555
+    port: 9550
     endpoint: /metrics
     metrics:
     - name: docker_container_states_containers
