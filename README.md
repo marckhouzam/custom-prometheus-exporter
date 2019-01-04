@@ -1,6 +1,6 @@
 # A YAML-defined Custom Prometheus exporter
 
-A YAML-defined Custom Prometheus exporter which allows you to generate and publish metrics in the Prometheus format.  The goal of this project is to allow to easily create a new Prometheus exporter without having to know how to write a native exporter.
+A YAML-defined Custom Prometheus exporter which allows you to generate and publish metrics in the Prometheus format.  The goal of this project is to allow you to easily create a new Prometheus exporter without having to know how to write a native exporter.
 
 Using a short YAML configuration file, you can define your own metrics and make them available for Prometheus to scrape.
 
