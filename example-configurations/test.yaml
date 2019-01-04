@@ -1,0 +1,36 @@
+  - name: test-exporter
+    port: 12345
+    endpoint: /test
+    metrics:
+    - name: test_gauge_values
+      help: Some values
+      type: gauge
+      execution:
+      - type: sh
+        command: expr 111
+        labels:
+          order: first
+      - type: sh
+        command: expr 222
+        labels:
+          order: second
+      - type: sh
+        command: expr 333
+        labels:
+          order: third
+    - name: test_gauce_other_values
+      help: Other values
+      type: gauge
+      execution:
+      - type: sh
+        command: echo 1234 | wc -c
+        labels:
+          type: four-digit
+      - type: sh
+        command: echo 12345 | wc -c
+        labels:
+          type: five-digit
+      - type: sh
+        command: echo 123456 | wc -c
+        labels:
+          type: six-digit

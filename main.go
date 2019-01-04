@@ -14,7 +14,7 @@ var (
 )
 
 func parseFlags() {
-	flag.StringVar(&configDirPath, "configDirPath", "exporter-configurations",
+	flag.StringVar(&configDirPath, "configDirPath", "example-configurations",
 		"The path to the directory where the YAML files defining the exporters reside.")
 
 	flag.Parse()
