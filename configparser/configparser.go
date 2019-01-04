@@ -11,7 +11,7 @@ import (
 // as defined by the user.
 type Config struct {
 	// The directory path where the config files can be found
-	ConfigDir string
+	ConfigFiles []string
 	// An array of defined exporters
 	Exporters []ExporterConfig
 }
@@ -42,26 +42,17 @@ type MetricsConfig struct {
 // ParseConfig parses the YAML files present in configDir which provide
 // the definition and configuration of the exporters
 func (c *Config) ParseConfig() error {
-	// Check if the directory exists
-	if _, err := os.Stat(c.ConfigDir); os.IsNotExist(err) {
-		return err
-	}
-
-	// List all files in the directory
-	f, err := os.Open(c.ConfigDir)
-	if err != nil {
-		return err
-	}
-	files, err := f.Readdir(-1)
-	f.Close()
-	if err != nil {
-		return err
+	// Check if all files exist
+	for _, file := range c.ConfigFiles {
+		if _, err := os.Stat(file); os.IsNotExist(err) {
+			return err
+		}
 	}
 
 	// Now parse the content of each file to populate our configuration
-	for _, file := range files {
+	for _, file := range c.ConfigFiles {
 		// First extract the data out of the file
-		data, err := ioutil.ReadFile(c.ConfigDir + "/" + file.Name())
+		data, err := ioutil.ReadFile(file)
 		if err != nil {
 			return err
 		}

@@ -16,20 +16,34 @@ const (
 	validateEndpoint string = "/validate"
 )
 
+// Support for flags that fill an array, this allows to pass the same
+// flag multiple times at the command line, for example to specify
+// multiple configuration files
+type arrayFlag []string
+
+func (a *arrayFlag) String() string {
+	return fmt.Sprintf("%v", []string(*a))
+}
+
+func (a *arrayFlag) Set(str string) error {
+	*a = append(*a, str)
+	return nil
+}
+
 var (
-	port          int    // The port for the main http server
-	configDirPath string // The path to the configuration directory
+	port        int       // The port for the main http server
+	configFiles arrayFlag // The list of input configuration files
 )
 
 func parseFlags() {
-	flag.IntVar(&port, "port", 9555, "The main http port for the global custom-prometheus-exporter")
-	flag.StringVar(&configDirPath, "configDirPath", "example-configurations",
-		"The path to the directory where the YAML files defining the exporters reside.")
+	flag.IntVar(&port, "p", 9555, "The main http port for the global custom-prometheus-exporter")
+	flag.Var(&configFiles, "f", "A configuration file defining some exporters.\n"+
+		"This flag can be used multiple times to include multiple files.")
 
 	flag.Parse()
 
-	if configDirPath == "" {
-		fmt.Println("You cannot specify an empty configuration directory")
+	if len(configFiles) == 0 {
+		fmt.Println("You must specify at least one configuration file.")
 		fmt.Println()
 		flag.Usage()
 		os.Exit(1)
@@ -57,11 +71,11 @@ func handleReloadEndpoint(w http.ResponseWriter, r *http.Request) {
 	// POST method requesting a reload
 
 	// Parse the new configuration, if it is not valid, ignore it and give an error message.
-	config := configparser.Config{ConfigDir: configDirPath}
+	config := configparser.Config{ConfigFiles: configFiles}
 
 	err := config.ParseConfig()
 	if err != nil {
-		errorMsg := fmt.Sprint("Reload failed! Error parsing new configuration within directory ", configDirPath, ":\n\t", err)
+		errorMsg := fmt.Sprint("Reload failed! Error parsing new configuration:\n\t", err)
 		log.Println(errorMsg)
 
 		w.Write([]byte(errorMsg))
@@ -88,13 +102,13 @@ func handleRootEndpoint(w http.ResponseWriter, r *http.Request) {
 func handleValidateEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Parse the new configuration and let the user know if it is valid.
 	log.Println(validateEndpoint, "has been called")
-	config := configparser.Config{ConfigDir: configDirPath}
+	config := configparser.Config{ConfigFiles: configFiles}
 
 	msg := fmt.Sprintln("Configuration is valid.  A reload will succeed.  Use the", reloadEndpoint, "endpoint.")
 
 	err := config.ParseConfig()
 	if err != nil {
-		msg = fmt.Sprint("Error parsing new configuration within directory ", configDirPath, ":\n\t", err)
+		msg = fmt.Sprint("Error parsing new configuration:\n\t", err)
 	}
 
 	log.Println(msg)
@@ -109,27 +123,26 @@ func handleValidateEndpoint(w http.ResponseWriter, r *http.Request) {
                     `))
 }
 
-func setupMainServer() {
-	http.HandleFunc("/", handleRootEndpoint)
-	http.HandleFunc(reloadEndpoint, handleReloadEndpoint)
-	http.HandleFunc("/reload", handleWrongReloadEndpoint)
-	http.HandleFunc(validateEndpoint, handleValidateEndpoint)
-
-	log.Println("Main server listening on port", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
-}
-
 func main() {
 	parseFlags()
 
-	config := configparser.Config{ConfigDir: configDirPath}
+	config := configparser.Config{ConfigFiles: configFiles}
 
 	err := config.ParseConfig()
 	if err != nil {
-		log.Fatal("Error parsing configuration within directory ", configDirPath, ": ", err)
+		log.Fatal("Error parsing configuration: ", err)
 	}
 
-	go setupMainServer()
+	// Setup main server
+	go func() {
+		http.HandleFunc("/", handleRootEndpoint)
+		http.HandleFunc(reloadEndpoint, handleReloadEndpoint)
+		http.HandleFunc("/reload", handleWrongReloadEndpoint)
+		http.HandleFunc(validateEndpoint, handleValidateEndpoint)
+
+		log.Println("Main server listening on port", port)
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
+	}()
 
 	exporter.CreateExporters(config.Exporters)
 }
