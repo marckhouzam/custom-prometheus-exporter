@@ -42,6 +42,15 @@ type MetricsConfig struct {
 	}
 }
 
+func verifyExporterConfig(config ExporterConfig) error {
+	// TODO check that fields that have limited possible values
+	// respect those values e.g,
+	//  ExecutionType must be sh,
+	//  Endpoint must start with /
+	//  MetricType is only gauge (for now)
+	return nil
+}
+
 // ParseConfig parses the YAML files present in configDir which provide
 // the definition and configuration of the exporters
 func (c *Config) ParseConfig() error {
@@ -62,10 +71,15 @@ func (c *Config) ParseConfig() error {
 
 		// Now parse the yaml directly into our data structure
 		newExporter := ExporterConfig{}
-		err = yaml.UnmarshalStrict(data, &newExporter)
-		if err != nil {
+		if err = yaml.UnmarshalStrict(data, &newExporter); err != nil {
 			return err
 		}
+
+		// Do some sanity checks on the configuration
+		if err = verifyExporterConfig(newExporter); err != nil {
+			return err
+		}
+
 		// Add the new exporter to the final array of exporters
 		c.Exporters = append(c.Exporters, newExporter)
 	}
