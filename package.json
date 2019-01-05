@@ -12,7 +12,6 @@
     "metrics"
   ],
   "author": "Marc Khouzam",
-  "email": "marc.khouzam@gmail.com",
   "license": "MIT",
   "homepage": "https://github.com/marckhouzam/custom-prometheus-exporter"
 }

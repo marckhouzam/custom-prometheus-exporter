@@ -83,7 +83,7 @@ func handleReloadEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Valid configuration: stop all exporters and restart new ones
+	// TODO Valid configuration: stop all exporters and restart new ones
 	w.Write([]byte(`The reload endpoint is NOT SUPPORTED yet`))
 
 }

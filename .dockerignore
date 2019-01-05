@@ -3,6 +3,4 @@ Dockerfile
 .git
 .gitignore
 .dockerignore
-package.json
-README.*
 chart

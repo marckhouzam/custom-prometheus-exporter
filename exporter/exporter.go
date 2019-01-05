@@ -14,8 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// MetricsCollector - An object to collect the metrics
-type MetricsCollector struct {
+type metricsCollector struct {
 	mutex         sync.RWMutex
 	metricsConfig []configparser.MetricsConfig
 	// TODO should support Counter not just Gauge
@@ -53,8 +52,8 @@ func CreateExporters(exportersConf []configparser.ExporterConfig) {
 	var wg sync.WaitGroup
 	for _, e := range exportersConf {
 		exporter := e
-		metricsCollector := MetricsCollector{}
-		metricsCollector.AddMetrics(exporter.Metrics)
+		metricsCollector := metricsCollector{}
+		metricsCollector.addMetrics(exporter.Metrics)
 
 		// Don't use the default registry to avoid getting the go collector
 		// and all its metrics
@@ -82,8 +81,7 @@ func CreateExporters(exportersConf []configparser.ExporterConfig) {
 	wg.Wait()
 }
 
-// AddMetrics defines the metrics that will be provided
-func (m *MetricsCollector) AddMetrics(metrics []configparser.MetricsConfig) {
+func (m *metricsCollector) addMetrics(metrics []configparser.MetricsConfig) {
 	m.metricsConfig = metrics
 	m.gaugeVecs = make([]*prometheus.GaugeVec, len(metrics))
 
@@ -102,7 +100,7 @@ func (m *MetricsCollector) AddMetrics(metrics []configparser.MetricsConfig) {
 	}
 }
 
-func (m *MetricsCollector) getMetrics() {
+func (m *metricsCollector) getMetrics() {
 	for i, metric := range m.metricsConfig {
 		for _, execution := range metric.Executions {
 			output, err := exec.Command(execution.ExecutionType, "-c", execution.Command).Output()
@@ -127,14 +125,14 @@ func (m *MetricsCollector) getMetrics() {
 }
 
 // Describe - Implements Collector.Describe
-func (m *MetricsCollector) Describe(ch chan<- *prometheus.Desc) {
+func (m *metricsCollector) Describe(ch chan<- *prometheus.Desc) {
 	for _, m := range m.gaugeVecs {
 		m.Describe(ch)
 	}
 }
 
 // Collect - Implements Collector.Collect
-func (m *MetricsCollector) Collect(ch chan<- prometheus.Metric) {
+func (m *metricsCollector) Collect(ch chan<- prometheus.Metric) {
 	m.mutex.Lock() // To protect metrics from concurrent collects.
 	defer m.mutex.Unlock()
 

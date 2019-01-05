@@ -10,9 +10,10 @@ import (
 // Config is the structure that holds the configuration of the custom-prometheus-exporter
 // as defined by the user.
 type Config struct {
-	// The directory path where the config files can be found
+	// The path of each configuration file defining the exporters
 	ConfigFiles []string
-	// An array of defined exporters
+	// The result of parsing the configuration files, which provides
+	// all necessary details to create the exporters
 	Exporters []ExporterConfig
 }
 
@@ -29,6 +30,8 @@ type ExporterConfig struct {
 
 // MetricsConfig -
 type MetricsConfig struct {
+	// All fields below must be exported (start with a capital letter)
+	// so that the yaml.UnmarshalStrict() method can set them.
 	Name       string
 	Help       string
 	MetricType string `yaml:"type"`
@@ -58,13 +61,13 @@ func (c *Config) ParseConfig() error {
 		}
 
 		// Now parse the yaml directly into our data structure
-		exporters := ExporterConfig{}
-		err = yaml.UnmarshalStrict(data, &exporters)
+		newExporter := ExporterConfig{}
+		err = yaml.UnmarshalStrict(data, &newExporter)
 		if err != nil {
 			return err
 		}
-		// Add the new exporters to the final array of exporters
-		c.Exporters = append(c.Exporters, exporters)
+		// Add the new exporter to the final array of exporters
+		c.Exporters = append(c.Exporters, newExporter)
 	}
 
 	return nil
