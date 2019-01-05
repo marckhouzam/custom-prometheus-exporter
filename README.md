@@ -25,7 +25,7 @@ curl localhost:12345/test
 
 The Custom Prometheus Exporter take one or more YAML-configuration files, which specify the metrics that are to be collected and how to collect them.  Example configurations can be found in the directory ```example-configurations```.
 
-Here is a sample configuration.  This configuration will create a "docker-exporter", which can be scraped on port ```9550``` and endpoint ```/metrics```.  This exporter generates a single metric (named: ```docker_container_states_containers```) that provides the count of containers in their three possible states (Running, Stopped, Paused). This metric is collected on each call to the /metrics endpoint using the three sh-shell commands specified in ```executions```.
+Here is a sample configuration.  This configuration will create a "docker-exporter", which can be scraped on port ```9550``` and endpoint ```/metrics```.  This exporter generates a single metric (named: ```docker_container_states_containers```) that provides the count of containers in their three possible states (Running, Stopped, Paused). This metric is collected on each call to the ```/metrics``` endpoint using the three sh-shell commands specified in ```executions```.
 
 ```
 name: docker-exporter
@@ -170,6 +170,10 @@ docker run --rm -d \
     custom-prometheus-exporter -f /tmp/exporterConfig.yaml
 ```
 
-### Automated Tests
+### TODO list
 
-Still on my TODO list.
+- [ ] Automated Tests
+- [ ] Support other types of metrics (e.g., Counter)
+- [ ] Complete /-/reload support
+- [ ] Support for bash and other shells
+- [ ] Support for native execution instead of shell command (e.g., running a script)
