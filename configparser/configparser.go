@@ -58,13 +58,13 @@ func (c *Config) ParseConfig() error {
 		}
 
 		// Now parse the yaml directly into our data structure
-		exporters := []ExporterConfig{}
+		exporters := ExporterConfig{}
 		err = yaml.UnmarshalStrict(data, &exporters)
 		if err != nil {
 			return err
 		}
 		// Add the new exporters to the final array of exporters
-		c.Exporters = append(c.Exporters, exporters...)
+		c.Exporters = append(c.Exporters, exporters)
 	}
 
 	return nil

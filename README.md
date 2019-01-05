@@ -11,26 +11,26 @@ The Custom Prometheus Exporter take one or more YAML-configuration files, which 
 Here is a sample configuration.  This configuration will create a "docker-exporter", which can be scraped on port ```9550``` and endpoint ```/metrics```.  This exporter generates a single metric (named: ```docker_container_states_containers```) that provides the count of containers in their three possible states (Running, Stopped, Paused). This metric is collected on each call to the /metrics endpoint using the three sh-shell commands specified in ```executions```.
 
 ```
-- name: docker-exporter
-  port: 9550
-  endpoint: /metrics
-  metrics:
-  - name: docker_container_states_containers
-    help: The count of containers in various states
-    type: gauge
-    executions:
-    - type: sh
-      command: docker info --format '{{ .ContainersRunning }}'
-      labels:
-        state: Running
-    - type: sh
-      command: docker info --format '{{ .ContainersStopped }}'
-      labels:
-        state: Stopped
-    - type: sh
-      command: docker info --format '{{ .ContainersPaused }}'
-      labels:
-        state: Paused
+name: docker-exporter
+port: 9550
+endpoint: /metrics
+metrics:
+- name: docker_container_states_containers
+  help: The count of containers in various states
+  type: gauge
+  executions:
+  - type: sh
+    command: docker info --format '{{ .ContainersRunning }}'
+    labels:
+      state: Running
+  - type: sh
+    command: docker info --format '{{ .ContainersStopped }}'
+    labels:
+      state: Stopped
+  - type: sh
+    command: docker info --format '{{ .ContainersPaused }}'
+    labels:
+      state: Paused
 ```
 
 The generated metric looks like this:
@@ -42,27 +42,34 @@ docker_container_states_containers{state="Paused"} 0
 docker_container_states_containers{state="Running"} 0
 docker_container_states_containers{state="Stopped"} 4
 ```
+
+### Multiple exporters
+
+The Custom Prometheus Exporter allows you to define many exporters at once. Each exporter **must** be in its own YAML configuration file. All defined exporters will be run concurrently and be accessible using their own configuration-specified port and endpoint.  If you want to create metrics that are logically different, it is recommended to use multiple exporters instead of a single exporter lumping all the unrelated metrics together.  Besides cleanly separating the definition of each logical exporter, the separation also allows each exporter can be scraped at different intervals.
+
+You may instead choose to run the Custom Prometheus Exporter multiple times, one for each exporter you want to create.  This choice is entirely up to you.
+
 ### Configuration API
 
 The format of the YAML configuration is the following:
 
 ```
-- name: string          # A name for the exporter
-  port: int             # The TCP port serving the metrics
-  endpoint: string      # The endpoint serving the metrics
-  metrics:              # An array of metrics to be generated
-  - name: string        # The published name of the metric
-    help: string        # The published help message of the metric
-    type: gauge         # Only Prometheus "gauge" is currently supported
-    executions:         # An array of executions to generate the metric
-    - type: sh          # Only sh is currently supported
-      command: string   # An sh command that will be run exactly as-specified
-                        #   Shell pipes (|) are allowed.
-                        #   The result of the command must be the single
-                        #      integer to be used in the metric
-      labels: map(string, string)
-                        # A map of label to value which qualifies an instance
-                        #   of the metric
+name: string          # A name for the exporter
+port: int             # The TCP port serving the metrics
+endpoint: string      # The endpoint serving the metrics
+metrics:              # An array of metrics to be generated
+- name: string        # The published name of the metric
+  help: string        # The published help message of the metric
+  type: gauge         # Only Prometheus "gauge" is currently supported
+  executions:         # An array of executions to generate the metric
+  - type: sh          # Only sh is currently supported
+    command: string   # An sh command that will be run exactly as-specified
+                      #   Shell pipes (|) are allowed.
+                      #   The result of the command must be the single
+                      #      integer to be used in the metric
+    labels: map(string, string)
+                      # A map of label to value which qualifies an instance
+                      #   of the metric
 ```
 
 ### Backwards-compatibility considerations
@@ -71,18 +78,18 @@ Once your YAML-defined exporter is being used, you should be careful when making
 
 Below are the fields that you should treat as API:
 ```
-- name: string
-  port: int             # API - Changes affect Prometheus configuration
-  endpoint: string      # API - Changes affect Prometheus configuration
-  metrics:
-  - name: string        # API - Changes affect consumers of metrics
-    help: string
-    type: gauge
-    executions:
-    - type: sh
-      command: string
-      labels: map(string, string)
-                        # API - Changes affect consumers of metrics
+name: string
+port: int             # API - Changes affect Prometheus configuration
+endpoint: string      # API - Changes affect Prometheus configuration
+metrics:
+- name: string        # API - Changes affect consumers of metrics
+  help: string
+  type: gauge
+  executions:
+  - type: sh
+    command: string
+    labels: map(string, string)
+                      # API - Changes affect consumers of metrics
 ```
 
 ## Contributing
@@ -113,8 +120,6 @@ Natively, after you've compiled it:
 ./custom-prometheus-exporter -f yamlConfigFile1 [-f yamlConfigFile2] ...
 ```
 
-By default, the metrics are exposed on port 9555 under the /metrics endpoint.  The port can be changed using the ```-p``` flag.
-
 ### Docker
 You an also use Docker:
 ```
@@ -127,4 +132,4 @@ docker run --rm -d \
 
 ### Automated Tests
 
-Still on my TODO list, but I know Go provides a framework to make that easy.
+Still on my TODO list.
