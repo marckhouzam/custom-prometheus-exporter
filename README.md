@@ -1,8 +1,25 @@
 # A YAML-defined Custom Prometheus exporter
 
-A YAML-defined Custom Prometheus exporter which allows you to generate and publish metrics in the Prometheus format.  The goal of this project is to allow you to easily create a new Prometheus exporter without having to know how to write a native exporter.
+Create your own Prometheus exporters using simple YAML.
+
+This project allows you to create your own Prometheus exporter which will generate and publish the metrics of your choice in the Prometheus format.  All this through a simple YAML configuration file.  The goal of this project is to allow you to quickly create and easily augment a new Prometheus exporter without having to know how to write a native exporter.
 
 Using a short YAML configuration file, you can define your own metrics and make them available for Prometheus to scrape.
+
+## Using the Custom Prometheus Exporter
+
+The simplest way to try out the Custom Prometheus Exporter is through docker:
+
+```
+docker run --rm \
+    --name custom-prometheus-exporter -p 12345:12345 \
+    -v $(pwd)/example-configurations/test-exporter.yaml:/tmp/test-exporter.yaml \
+    marckhouzam/custom-prometheus-exporter -f /tmp/test-exporter.yaml
+```
+Then you can see the metrics using:
+```
+curl localhost:12345/test
+```
 
 ## Configuration
 
@@ -48,6 +65,29 @@ docker_container_states_containers{state="Stopped"} 4
 The Custom Prometheus Exporter allows you to define many exporters at once. Each exporter **must** be in its own YAML configuration file. All defined exporters will be run concurrently and be accessible using their own configuration-specified port and endpoint.  If you want to create metrics that are logically different, it is recommended to use multiple exporters instead of a single exporter lumping all the unrelated metrics together.  Besides cleanly separating the definition of each logical exporter, the separation also allows each exporter can be scraped at different intervals.
 
 You may instead choose to run the Custom Prometheus Exporter multiple times, one for each exporter you want to create.  This choice is entirely up to you.
+
+Here is how to run both example exporters together, using Docker:
+
+```
+docker run --rm \
+    --name custom-prometheus-exporter -p 12345:12345 -p 9550:9550 \
+    -v $(pwd)/example-configurations/test-exporter.yaml:/tmp/test-exporter.yaml \
+    -v $(pwd)/example-configurations/docker-exporter.yaml:/tmp/docker-exporter.yaml \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    marckhouzam/custom-prometheus-exporter -f /tmp/test-exporter.yaml -f /tmp/docker-exporter.yaml
+```
+Then you can see the metrics using:
+```
+curl localhost:9550/metrics
+curl localhost:12345/test
+```
+Note that the example ```docker-exporter.yaml``` uses docker commands.  To be able to run docker commands inside a docker container, you must mount ```/var/run/docker.sock``` as shown above.
+
+### Main Custom Prometheus Exporter endpoints
+
+The actual Custom Prometheus Exporter provides its own endpoints.  By default, the Custom Prometheus Exporter listens on port ```9530``` but it can be changed using the ```-p``` command-line parameter.  This port is not related to the exporters you define, but only to the global Custom Prometheus Exporter endpoints.
+
+You can obtain a list of main endpoints by navigating to ```http://localhost:9530```.
 
 ### Configuration API
 

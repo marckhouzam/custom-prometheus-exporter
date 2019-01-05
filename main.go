@@ -14,6 +14,7 @@ import (
 const (
 	reloadEndpoint   string = "/-/reload"
 	validateEndpoint string = "/validate"
+	defaultMainPort  int    = 9530 // Reserved at https://github.com/prometheus/prometheus/wiki/Default-port-allocations
 )
 
 // Support for flags that fill an array, this allows to pass the same
@@ -36,7 +37,7 @@ var (
 )
 
 func parseFlags() {
-	flag.IntVar(&port, "p", 9555, "The main http port for the global custom-prometheus-exporter")
+	flag.IntVar(&port, "p", defaultMainPort, "The main http port for the global custom-prometheus-exporter")
 	flag.Var(&configFiles, "f", "A configuration file defining some exporters.\n"+
 		"This flag can be used multiple times to include multiple files.")
 
@@ -88,15 +89,20 @@ func handleReloadEndpoint(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleRootEndpoint(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(`<html>
-					<head><title>Custom Prometheus Exporter</title></head>
-					<body>
-					   <h1>Custom Prometheus Exporter</h1>
-					   <p>For more information, visit <a href=https://github.org/marckhouzam/custom-prometheus-exporter>GitHub</a></p>
-					   <p><a href='hello'>LIST ALL EXISTING EXPORTERS AND THEIR ENDPOINTS</a></p>
-					   </body>
-					</html>
-				  `))
+	w.Write([]byte(`
+	    <html>
+	    <head><title>Custom Prometheus Exporter</title></head>
+	    <body>
+	        <h1>Custom Prometheus Exporter</h1>
+	        <p>For more information, visit <a href=https://github.org/marckhouzam/custom-prometheus-exporter>GitHub</a></p>
+	        <p>Available main endpoints:</p>
+	        <ul>
+	            <li><a href=/validate>/validate</a> - Validate if modifications to the configuration files are valid.
+	            <li><a href=/-/reload>/-/reload</a> - POST only. Reload the configuration files (assuming they have changed) and restart all exporters
+	        </ul>
+	    </body>
+	    </html>
+	`))
 }
 
 func handleValidateEndpoint(w http.ResponseWriter, r *http.Request) {
