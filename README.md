@@ -177,3 +177,4 @@ docker run --rm -d \
 - [ ] Complete /-/reload support
 - [ ] Support for bash and other shells
 - [ ] Support for native execution instead of shell command (e.g., running a script)
+- [ ] Add a Kubernetes Helm chart

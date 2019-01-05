@@ -3,54 +3,50 @@ package configparser
 import (
 	"io/ioutil"
 	"os"
-	"strings"
 	"testing"
+
+	"gotest.tools/assert"
 )
 
-func createFile(data string) (string, error) {
+func createFile(t *testing.T, data string) string {
 	filename := "/tmp/customPromExporterTest.data"
-	err := ioutil.WriteFile(filename, []byte(data), 0644)
-	return filename, err
+	assert.NilError(t, ioutil.WriteFile(filename, []byte(data), 0644))
+	return filename
+}
+
+func removeFile(name string) {
+	os.Remove(name)
 }
 
 func TestSingleConfigFile(t *testing.T) {
 	c := Config{ConfigFiles: []string{"../example-configurations/test-exporter.yaml"}}
-	if err := c.ParseConfig(); err != nil {
-		t.Error(err)
-	}
+	assert.NilError(t, c.ParseConfig())
 }
 
 func TestTwoConfigFiles(t *testing.T) {
 	c := Config{ConfigFiles: []string{"../example-configurations/test-exporter.yaml", "../example-configurations/docker-exporter.yaml"}}
-	if err := c.ParseConfig(); err != nil {
-		t.Error(err)
-	}
+	assert.NilError(t, c.ParseConfig())
 }
 
 func TestMissingSingleConfigFile(t *testing.T) {
 	c := Config{ConfigFiles: []string{"missing.yaml"}}
-	if err := c.ParseConfig(); err == nil {
-		t.Error("Did not detect missing config file")
-	}
+	assert.ErrorContains(t, c.ParseConfig(), "missing.yaml: no such file or directory")
 }
 
 func TestMissingFirstConfigFile(t *testing.T) {
 	c := Config{ConfigFiles: []string{"missing.yaml", "../example-configurations/docker-exporter.yaml"}}
-	if err := c.ParseConfig(); err == nil {
-		t.Error("Did not detect missing config file")
-	}
+	assert.ErrorContains(t, c.ParseConfig(), "missing.yaml: no such file or directory")
 }
 
 func TestMissingSecondConfigFile(t *testing.T) {
 	c := Config{ConfigFiles: []string{"../example-configurations/test-exporter.yaml", "missing.yaml"}}
-	if err := c.ParseConfig(); err == nil {
-		t.Error("Did not detect missing config file")
-	}
+	assert.ErrorContains(t, c.ParseConfig(), "missing.yaml: no such file or directory")
+
 }
 func TestInvalidConfigFile(t *testing.T) {
 	errorTag := "unexpectedTag"
 
-	filename, err := createFile(`
+	data := `
 name: test-exporter
 port: 12345
 endpoint: /test
@@ -64,22 +60,94 @@ metrics:
     command: expr 111
     labels:
       order: first
-`)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	defer os.Remove(filename)
+`
+	filename := createFile(t, data)
+	defer removeFile(filename)
 
 	c := Config{ConfigFiles: []string{filename}}
-	if err := c.ParseConfig(); err == nil || !strings.Contains(err.Error(), errorTag+" not found") {
-		if err == nil {
-			t.Error("Did not detect bad config file")
-			return
-		} else {
-			t.Error("Did not detect bad config file, but got error:\n\t" + err.Error())
-			return
-		}
-	}
+	assert.ErrorContains(t, c.ParseConfig(), "field "+errorTag+" not found")
+}
+
+func TestMissingName(t *testing.T) {
+	data := `
+#name: test-exporter       Missing field should cause error
+port: 12345
+endpoint: /test
+metrics:
+- name: test_gauge_values
+  help: Some values
+  type: gauge
+  executions:
+  - type: sh
+    command: expr 111
+    labels:
+      order: first
+`
+
+	filename := createFile(t, data)
+	defer removeFile(filename)
+
+	c := Config{ConfigFiles: []string{filename}}
+	assert.ErrorContains(t, c.ParseConfig(), "field name not found")
+}
+
+func TestMissingPort(t *testing.T) {
+	data := `
+name: test-exporter
+#port: 12345          Missing field should cause error
+endpoint: /test
+metrics:
+- name: test_gauge_values
+  help: Some values
+  type: gauge
+  executions:
+  - type: sh
+    command: expr 111
+    labels:
+      order: first
+`
+
+	filename := createFile(t, data)
+	defer removeFile(filename)
+
+	c := Config{ConfigFiles: []string{filename}}
+	assert.ErrorContains(t, c.ParseConfig(), "field port not found")
+}
+
+func TestMissingEndpoint(t *testing.T) {
+	data := `
+name: test-exporter
+port: 12345
+#endpoint: /test         Missing field should default to /metrics
+metrics:
+- name: test_gauge_values
+  help: Some values
+  type: gauge
+  executions:
+  - type: sh
+    command: expr 111
+    labels:
+      order: first
+`
+	filename := createFile(t, data)
+	defer removeFile(filename)
+
+	c := Config{ConfigFiles: []string{filename}}
+	assert.NilError(t, c.ParseConfig())
+	assert.Equal(t, c.Exporters[0].Endpoint, "/metrics")
+}
+
+func TestMissingMetrics(t *testing.T) {
+	data := `
+name: test-exporter
+port: 12345
+endpoint: /test
+#metrics:             Missing field should cause error
+`
+	filename := createFile(t, data)
+	defer removeFile(filename)
+
+	c := Config{ConfigFiles: []string{filename}}
+	assert.ErrorContains(t, c.ParseConfig(), "field metrics not found")
+
 }
