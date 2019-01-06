@@ -94,21 +94,21 @@ You can obtain a list of main endpoints by navigating to ```http://localhost:953
 The format of the YAML configuration is the following:
 
 ```
-name: string          # A name for the exporter
-port: int             # The TCP port serving the metrics
-endpoint: string      # The endpoint serving the metrics
-metrics:              # An array of metrics to be generated
-- name: string        # The published name of the metric
-  help: string        # The published help message of the metric
-  type: gauge         # Only Prometheus "gauge" is currently supported
-  executions:         # An array of executions to generate the metric
-  - type: sh          # Only sh is currently supported
-    command: string   # An sh command that will be run exactly as-specified
+name: string          # A name for the exporter - MANDATORY
+port: int             # The TCP port serving the metrics - MANDATORY
+endpoint: string      # The endpoint serving the metrics - OPTIONAL, defaults to /metrics
+metrics:              # An array of metrics to be generated - MANDATORY
+- name: string        # The published name of the metric - MANDATORY
+  help: string        # The published help message of the metric - MANDATORY
+  type: gauge         # Only Prometheus "gauge" is currently supported - MANDATORY
+  executions:         # An array of executions to generate the metric - MANDATORY
+  - type: sh          # Only sh is currently supported - MANDATORY
+    command: string   # An sh command that will be run exactly as-specified - MANDATORY
                       #   Shell pipes (|) are allowed.
                       #   The result of the command must be the single
                       #      integer to be used in the metric
     labels: map(string, string)
-                      # A map of label to value which qualifies an instance
+                      # A map of label to value which qualifies an instance - MANDATORY
                       #   of the metric
 ```
 

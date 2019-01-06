@@ -1,10 +1,16 @@
 package configparser
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	yaml "gopkg.in/yaml.v2"
+)
+
+const (
+	defaultEndpoint = "/metrics"
 )
 
 // Config is the structure that holds the configuration of the custom-prometheus-exporter
@@ -42,12 +48,74 @@ type MetricsConfig struct {
 	}
 }
 
-func verifyExporterConfig(config ExporterConfig) error {
-	// TODO check that fields that have limited possible values
-	// respect those values e.g,
-	//  ExecutionType must be sh,
-	//  Endpoint must start with /
-	//  MetricType is only gauge (for now)
+func verifyExporterConfig(config *ExporterConfig) error {
+	// Make sure 'name' is present
+	if config.Name == "" {
+		return errors.New("Missing field 'name' in top configuration")
+	}
+
+	// Make sure 'port' is present
+	if config.Port == 0 {
+		return errors.New("Missing field 'port' in top configuration")
+	}
+
+	// If 'endpoint' is absent, use the the default endpoint
+	if config.Endpoint == "" {
+		config.Endpoint = defaultEndpoint
+		return nil
+	}
+
+	// Add '/' at the start of 'endpoint' if it is missing
+	if config.Endpoint[0] != '/' {
+		config.Endpoint = strings.Join([]string{"/", config.Endpoint}, "")
+		return nil
+	}
+
+	// Make sure 'metrics' is present
+	if config.Metrics == nil || len(config.Metrics) == 0 {
+		return errors.New("Missing field 'metrics' in top configuration")
+	}
+
+	for i, metric := range config.Metrics {
+		if metric.Name == "" {
+			return errors.New("Missing field 'name' in 'metrics' configuration of metric " + string(i))
+		}
+
+		if metric.Help == "" {
+			return errors.New("Missing field 'help' in 'metrics' configuration of metric " + string(i))
+		}
+
+		if metric.MetricType == "" {
+			return errors.New("Missing field 'type' in 'metrics' configuration of metric " + string(i))
+		}
+
+		if metric.MetricType != "gauge" {
+			return errors.New("Wrong value for field 'type' in 'metrics' configuration of metric " + string(i) +
+				". Supported values are: gauge")
+		}
+
+		// Make sure 'executions' is present
+		if metric.Executions == nil || len(metric.Executions) == 0 {
+			return errors.New("Missing field 'executions' in 'metrics' configuration of metric " + string(i))
+		}
+
+		for j, execution := range metric.Executions {
+			if execution.ExecutionType == "" {
+				return errors.New("Missing field 'type' in 'executions' configuration of metric " + string(i) +
+					" and execution " + string(j))
+			}
+
+			if execution.ExecutionType != "sh" {
+				return errors.New("Wrong value for field 'type' in 'executions' configuration of metric " + string(i) +
+					" and execution " + string(j) + ". Supported values are: sh")
+			}
+
+			if execution.Command == "" {
+				return errors.New("Missing field 'command' in 'executions' configuration of metric " + string(i) +
+					" and execution " + string(j))
+			}
+		}
+	}
 	return nil
 }
 
@@ -76,7 +144,7 @@ func (c *Config) ParseConfig() error {
 		}
 
 		// Do some sanity checks on the configuration
-		if err = verifyExporterConfig(newExporter); err != nil {
+		if err = verifyExporterConfig(&newExporter); err != nil {
 			return err
 		}
 
