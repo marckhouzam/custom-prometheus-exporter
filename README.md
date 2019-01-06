@@ -108,8 +108,10 @@ metrics:              # An array of metrics to be generated - MANDATORY
                       #   The result of the command must be the single
                       #      integer to be used in the metric
     labels: map(string, string)
-                      # A map of label to value which qualifies an instance - MANDATORY
-                      #   of the metric
+                      # A map of label to value
+                      #  The labels qualify further an instance of the metric
+                      # This field is MANDATORY if there are more than one execution in
+                      #  the executions array of the metric; otherwise it it optional
 ```
 
 ### Backwards-compatibility considerations

@@ -402,3 +402,97 @@ metrics:
 	c := Config{ConfigFiles: []string{filename}}
 	assert.ErrorContains(t, c.ParseConfig(), "Missing field 'command' in 'executions' configuration")
 }
+
+func TestMissingMetricExecutionLabelsForMoreThanOneExec(t *testing.T) {
+	data := `
+name: test-exporter
+port: 12345
+endpoint: /test
+metrics:
+- name: test_gauge_values
+  help: Some values
+  type: gauge
+  executions:
+  - type: sh
+    command: expr 111
+    labels:
+      order: first
+  - type: sh
+    command: expr 222
+#    labels:              # Missing field cause an error
+`
+	filename := createFile(t, data)
+	defer removeFile(filename)
+
+	c := Config{ConfigFiles: []string{filename}}
+	assert.ErrorContains(t, c.ParseConfig(), "Missing field 'labels' in 'executions' configuration")
+}
+
+func TestEmptyMetricExecutionLabelsMoreThanOneExec(t *testing.T) {
+	data := `
+name: test-exporter
+port: 12345
+endpoint: /test
+metrics:
+- name: test_gauge_values
+  help: Some values
+  type: gauge
+  executions:
+  - type: sh
+    command: expr 111
+    labels:
+      order: first
+  - type: sh
+    command: expr 222
+    labels:                   # Empty field should cause an error
+`
+	filename := createFile(t, data)
+	defer removeFile(filename)
+
+	c := Config{ConfigFiles: []string{filename}}
+	assert.ErrorContains(t, c.ParseConfig(), "Missing field 'labels' in 'executions' configuration")
+}
+
+func TestMissingMetricExecutionLabelsForOneExec(t *testing.T) {
+	data := `
+name: test-exporter
+port: 12345
+endpoint: /test
+metrics:
+- name: test_gauge_values
+  help: Some values
+  type: gauge
+  executions:
+  - type: sh
+    command: expr 111
+#    labels:              # Missing field should be accepted
+`
+	filename := createFile(t, data)
+	defer removeFile(filename)
+
+	c := Config{ConfigFiles: []string{filename}}
+	assert.NilError(t, c.ParseConfig())
+	assert.Equal(t, len(c.Exporters[0].Metrics[0].Executions[0].Labels), 0, "Labels should be empty based on config")
+}
+
+func TestEmptyMetricExecutionLabelsForOneExec(t *testing.T) {
+	data := `
+name: test-exporter
+port: 12345
+endpoint: /test
+metrics:
+- name: test_gauge_values
+  help: Some values
+  type: gauge
+  executions:
+  - type: sh
+    command: expr 111
+    labels:                   # Empty field should be accepted
+`
+	filename := createFile(t, data)
+	defer removeFile(filename)
+
+	c := Config{ConfigFiles: []string{filename}}
+	assert.NilError(t, c.ParseConfig())
+	assert.Equal(t, len(c.Exporters[0].Metrics[0].Executions[0].Labels), 0, "Labels should be empty based on config")
+}

@@ -72,7 +72,7 @@ func verifyExporterConfig(config *ExporterConfig) error {
 	}
 
 	// Make sure 'metrics' is present
-	if config.Metrics == nil || len(config.Metrics) == 0 {
+	if len(config.Metrics) == 0 {
 		return errors.New("Missing field 'metrics' in top configuration")
 	}
 
@@ -95,7 +95,7 @@ func verifyExporterConfig(config *ExporterConfig) error {
 		}
 
 		// Make sure 'executions' is present
-		if metric.Executions == nil || len(metric.Executions) == 0 {
+		if len(metric.Executions) == 0 {
 			return errors.New("Missing field 'executions' in 'metrics' configuration of metric " + string(i))
 		}
 
@@ -112,6 +112,13 @@ func verifyExporterConfig(config *ExporterConfig) error {
 
 			if execution.Command == "" {
 				return errors.New("Missing field 'command' in 'executions' configuration of metric " + string(i) +
+					" and execution " + string(j))
+			}
+
+			// Check 'labels'. Can be omitted only if there is a single element
+			// in the 'executions' array, for this metric
+			if len(metric.Executions) > 1 && len(execution.Labels) == 0 {
+				return errors.New("Missing field 'labels' in 'executions' configuration of metric " + string(i) +
 					" and execution " + string(j))
 			}
 		}
