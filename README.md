@@ -172,9 +172,22 @@ docker run --rm -d \
     custom-prometheus-exporter -f /tmp/exporterConfig.yaml
 ```
 
+### Running automated tests
+
+To run the automated tests you will also need to install the [go assert package](https://godoc.org/gotest.tools/assert):
+
+```
+go get gotest.tools/assert
+```
+
+Then run the tests:
+```
+go test ./...
+```
+
 ### TODO list
 
-- [ ] Automated Tests
+- [ ] Add more automated Tests
 - [ ] Support other types of metrics (e.g., Counter)
 - [ ] Complete /-/reload support
 - [ ] Support for bash and other shells
