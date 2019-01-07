@@ -105,9 +105,10 @@ func verifyExporterConfig(config *ExporterConfig) error {
 					" and execution " + string(j))
 			}
 
-			if execution.ExecutionType != "sh" {
+			if execution.ExecutionType != "sh" && execution.ExecutionType != "bash" &&
+				execution.ExecutionType != "tcsh" && execution.ExecutionType != "zsh" {
 				return errors.New("Wrong value for field 'type' in 'executions' configuration of metric " + string(i) +
-					" and execution " + string(j) + ". Supported values are: sh")
+					" and execution " + string(j) + ". Supported values are: sh, bash, tcsh or zsh")
 			}
 
 			if execution.Command == "" {

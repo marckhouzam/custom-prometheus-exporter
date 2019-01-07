@@ -10,7 +10,9 @@ RUN go-wrapper download github.com/prometheus/client_golang/prometheus && \
 
 FROM docker:stable
 
-RUN apk --no-cache add ca-certificates
+RUN apk update && \
+    apk --no-cache add ca-certificates && \
+    apk --no-cache add bash tcsh zsh
 
 WORKDIR /root
 

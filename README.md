@@ -102,16 +102,18 @@ metrics:              # An array of metrics to be generated - MANDATORY
   help: string        # The published help message of the metric - MANDATORY
   type: gauge         # Only Prometheus "gauge" is currently supported - MANDATORY
   executions:         # An array of executions to generate the metric - MANDATORY
-  - type: sh          # Only sh is currently supported - MANDATORY
+  - type: sh || bash || tcsh || zsh
+                      # The syntax used in the 'command' field must be
+                      #   compatible with the shell specified - MANDATORY
     command: string   # An sh command that will be run exactly as-specified - MANDATORY
                       #   Shell pipes (|) are allowed.
                       #   The result of the command must be the single
                       #      integer to be used in the metric
     labels: map(string, string)
-                      # A map of label to value
-                      #  The labels qualify further an instance of the metric
+                      # A map of label to value.
+                      # The labels qualify further an instance of the metric
                       # This field is MANDATORY if there are more than one execution in
-                      #  the executions array of the metric; otherwise it it optional
+                      #   the executions array of the metric; otherwise it it optional
 ```
 
 ### Backwards-compatibility considerations
@@ -190,6 +192,5 @@ go test ./...
 - [ ] Add more automated Tests
 - [ ] Support other types of metrics (e.g., Counter)
 - [ ] Complete /-/reload support
-- [ ] Support for bash and other shells
 - [ ] Support for native execution instead of shell command (e.g., running a script)
 - [ ] Add a Kubernetes Helm chart

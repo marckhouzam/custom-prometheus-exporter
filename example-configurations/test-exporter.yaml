@@ -9,28 +9,32 @@ metrics:
   - type: sh
     command: expr 111
     labels:
-      order: first
-  - type: sh
-    command: expr 222
+      shell: sh
+  - type: bash
+    command: alias a=222;alias|grep alias|cut -d= -f2|cut -d\' -f2      # Only bash uses prints aliases so that the result will be 222
     labels:
-      order: second
-  - type: sh
-    command: expr 333
+      shell: bash
+  - type: tcsh
+    command: setenv test 333;env | grep test | cut -d= -f2   # Only tcsh has the setenv command
     labels:
-      order: third
+      shell: tcsh 
+  - type: zsh
+    command: foreach i (1) echo 444;end      # Only zsh can run foreach on a single line
+    labels:
+      shell: zsh
 - name: test_gauge_other_values
   help: Other values
   type: gauge
   executions:
   - type: sh
-    command: echo 1234 | wc -c
+    command: echo 123 | wc -c
     labels:
       type: four-digit
   - type: sh
-    command: echo 12345 | wc -c
+    command: echo 1234 | wc -c
     labels:
       type: five-digit
   - type: sh
-    command: echo 123456 | wc -c
+    command: echo 12345 | wc -c
     labels:
       type: six-digit
