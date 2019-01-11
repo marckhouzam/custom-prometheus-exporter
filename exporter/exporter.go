@@ -110,7 +110,7 @@ func (m *metricsCollector) getMetrics() {
 			var timedout bool
 			timeout := *execution.Timeout
 			if timeout != 0 {
-				timer = time.AfterFunc(time.Duration(timeout)*time.Second, func() {
+				timer = time.AfterFunc(time.Duration(timeout)*time.Millisecond, func() {
 					timedout = true
 					cmd.Process.Kill()
 				})
@@ -121,12 +121,12 @@ func (m *metricsCollector) getMetrics() {
 			}
 			if timedout {
 				log.Println("Timeout when running:", execution.Command)
-				return
+				continue
 			}
 
 			if err != nil {
 				log.Println("Got error when running:", execution.Command+":", err)
-				return
+				continue
 			}
 
 			countStr := strings.TrimSpace(string(output))
@@ -135,7 +135,7 @@ func (m *metricsCollector) getMetrics() {
 				log.Printf(
 					"Got error when parsing result of: "+execution.Command+
 						". Expecting integer result but got %v and error "+err.Error(), countStr)
-				return
+				continue
 			}
 
 			// Now set the metrics

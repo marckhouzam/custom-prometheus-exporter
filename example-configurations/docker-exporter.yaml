@@ -8,14 +8,17 @@ metrics:
   executions:
   - type: sh
     command: docker info --format '{{ .ContainersRunning }}'
+    timeout: 500
     labels:
       state: Running
   - type: sh
     command: docker info --format '{{ .ContainersStopped }}'
+    timeout: 500
     labels:
       state: Stopped
   - type: sh
     command: docker info --format '{{ .ContainersPaused }}'
+    timeout: 500
     labels:
       state: Paused
 - name: docker_image_types_images
@@ -24,13 +27,16 @@ metrics:
   executions:
   - type: sh
     command: docker images --quiet --filter dangling=true | wc -l
+    timeout: 500
     labels:
       type: dangling
   - type: sh
     command: docker images --quiet | wc -l
+    timeout: 500
     labels:
       type: top-level
   - type: sh
     command: expr `docker images --all --quiet | wc -l` - `docker images --quiet | wc -l`
+    timeout: 500
     labels:
       type: intermediate

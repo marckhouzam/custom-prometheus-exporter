@@ -38,14 +38,17 @@ metrics:
   executions:
   - type: sh
     command: docker info --format '{{ .ContainersRunning }}'
+    timeout: 500
     labels:
       state: Running
   - type: sh
     command: docker info --format '{{ .ContainersStopped }}'
+    timeout: 500
     labels:
       state: Stopped
   - type: sh
     command: docker info --format '{{ .ContainersPaused }}'
+    timeout: 500
     labels:
       state: Paused
 ```
@@ -109,6 +112,7 @@ metrics:              # An array of metrics to be generated - MANDATORY
                       #   Shell pipes (|) are allowed.
                       #   The result of the command must be the single
                       #      integer to be used in the metric
+    timeout: uint     # Timeout in milliseconds for the command execution - OPTIONAL, defaults to 1000
     labels: map(string, string)
                       # A map of label to value.
                       # The labels qualify further an instance of the metric
@@ -132,6 +136,7 @@ metrics:
   executions:
   - type: sh
     command: string
+    timeout: uint
     labels: map(string, string)
                       # API - Changes affect consumers of metrics
 ```

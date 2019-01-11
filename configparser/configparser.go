@@ -11,7 +11,7 @@ import (
 
 const (
 	defaultEndpoint      = "/metrics"
-	defaultTimeout  uint = 1
+	defaultTimeout  uint = 1000
 )
 
 // Config is the structure that holds the configuration of the custom-prometheus-exporter
