@@ -10,7 +10,8 @@ import (
 )
 
 const (
-	defaultEndpoint = "/metrics"
+	defaultEndpoint      = "/metrics"
+	defaultTimeout  uint = 1
 )
 
 // Config is the structure that holds the configuration of the custom-prometheus-exporter
@@ -44,7 +45,7 @@ type MetricsConfig struct {
 	Executions []struct {
 		ExecutionType string `yaml:"type"`
 		Command       string
-		Timeout       uint
+		Timeout       *uint // A pointer so we can check for nil (missing)
 		Labels        map[string]string
 	}
 }
@@ -116,8 +117,10 @@ func verifyExporterConfig(config *ExporterConfig) error {
 					" and execution " + string(j))
 			}
 
-			if execution.Timeout == 0 {
-				config.Metrics[i].Executions[j].Timeout = 1
+			// If 'timeout' was omitted use the default timeout
+			if execution.Timeout == nil {
+				defaultT := defaultTimeout
+				config.Metrics[i].Executions[j].Timeout = &defaultT
 			}
 
 			// Check 'labels'. Can be omitted only if there is a single element
