@@ -415,7 +415,7 @@ metrics:
   executions:
   - type: sh
     command: sleep 5
-#    timeout: 3                # Missing field should default to 1 second
+#    timeout: 3                # Missing field should default to 1000 milliseconds
     labels:
       order: first
 `
@@ -424,7 +424,7 @@ metrics:
 
 	c := Config{ConfigFiles: []string{filename}}
 	assert.NilError(t, c.ParseConfig())
-	assert.Equal(t, c.Exporters[0].Metrics[0].Executions[0].Timeout, uint(1))
+	assert.Equal(t, *c.Exporters[0].Metrics[0].Executions[0].Timeout, uint(1000))
 }
 
 func TestNegativeMetricExecutionTimeout(t *testing.T) {
