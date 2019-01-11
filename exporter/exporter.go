@@ -97,19 +97,16 @@ func (m *metricsCollector) getMetrics() {
 		for _, execution := range metric.Executions {
 			cmd := exec.Command(execution.ExecutionType, "-c", execution.Command)
 
-			var timer *time.Timer
 			var timedout bool
 			timeout := *execution.Timeout
 			if timeout != 0 {
-				timer = time.AfterFunc(time.Duration(timeout)*time.Millisecond, func() {
+				timer := time.AfterFunc(time.Duration(timeout)*time.Millisecond, func() {
 					timedout = true
 					cmd.Process.Kill()
 				})
+				defer timer.Stop()
 			}
 			output, err := cmd.Output()
-			if timer != nil {
-				timer.Stop()
-			}
 			if timedout {
 				log.Println("Timeout when running:", execution.Command)
 				continue
