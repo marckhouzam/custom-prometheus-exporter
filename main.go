@@ -139,16 +139,14 @@ func main() {
 		log.Fatal("Error parsing configuration: ", err)
 	}
 
-	// Setup main server
-	go func() {
-		http.HandleFunc("/", handleRootEndpoint)
-		http.HandleFunc(reloadEndpoint, handleReloadEndpoint)
-		http.HandleFunc("/reload", handleWrongReloadEndpoint)
-		http.HandleFunc(validateEndpoint, handleValidateEndpoint)
-
-		log.Println("Main server listening on port", port)
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
-	}()
-
 	exporter.CreateExporters(config.Exporters)
+
+	// Setup main server
+	http.HandleFunc("/", handleRootEndpoint)
+	http.HandleFunc(reloadEndpoint, handleReloadEndpoint)
+	http.HandleFunc("/reload", handleWrongReloadEndpoint)
+	http.HandleFunc(validateEndpoint, handleValidateEndpoint)
+
+	log.Println("Main server listening on port", port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", port), nil))
 }

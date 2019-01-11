@@ -50,7 +50,6 @@ func handleRootEndpoint(name string, endpoint string) func(http.ResponseWriter, 
 // in the configuration
 func CreateExporters(exportersConf []configparser.ExporterConfig) {
 
-	var wg sync.WaitGroup
 	for _, e := range exportersConf {
 		exporter := e
 		metricsCollector := metricsCollector{}
@@ -62,12 +61,7 @@ func CreateExporters(exportersConf []configparser.ExporterConfig) {
 		registry.MustRegister(&metricsCollector)
 
 		// Don't block, since we can run multiple exporters.
-		// Increment the WaitGroup counter.
-		wg.Add(1)
 		go func() {
-			// Decrement the counter when the goroutine completes.
-			defer wg.Done()
-
 			handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
 
 			server := http.NewServeMux()
@@ -77,9 +71,6 @@ func CreateExporters(exportersConf []configparser.ExporterConfig) {
 			log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", exporter.Port), server))
 		}()
 	}
-
-	// Wait for all Exporters to complete.
-	wg.Wait()
 }
 
 func (m *metricsCollector) addMetrics(metrics []configparser.MetricsConfig) {
