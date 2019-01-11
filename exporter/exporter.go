@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/marckhouzam/custom-prometheus-exporter/configparser"
 	"github.com/prometheus/client_golang/prometheus"
@@ -103,7 +104,20 @@ func (m *metricsCollector) addMetrics(metrics []configparser.MetricsConfig) {
 func (m *metricsCollector) getMetrics() {
 	for i, metric := range m.metricsConfig {
 		for _, execution := range metric.Executions {
-			output, err := exec.Command(execution.ExecutionType, "-c", execution.Command).Output()
+			cmd := exec.Command(execution.ExecutionType, "-c", execution.Command)
+
+			var timer *time.Timer
+			if execution.Timeout != 0 {
+				timer = time.AfterFunc(time.Duration(execution.Timeout)*time.Second, func() {
+					cmd.Process.Kill()
+					log.Println("Timeout when running:", execution.Command)
+					return
+				})
+			}
+			output, err := cmd.Output()
+			if timer != nil {
+				timer.Stop()
+			}
 			if err != nil {
 				log.Println("Got error when running:", execution.Command+":", err)
 				return

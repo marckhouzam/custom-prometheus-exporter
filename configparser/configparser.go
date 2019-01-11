@@ -44,6 +44,7 @@ type MetricsConfig struct {
 	Executions []struct {
 		ExecutionType string `yaml:"type"`
 		Command       string
+		Timeout       uint
 		Labels        map[string]string
 	}
 }
@@ -68,7 +69,6 @@ func verifyExporterConfig(config *ExporterConfig) error {
 	// Add '/' at the start of 'endpoint' if it is missing
 	if config.Endpoint[0] != '/' {
 		config.Endpoint = strings.Join([]string{"/", config.Endpoint}, "")
-		return nil
 	}
 
 	// Make sure 'metrics' is present
@@ -114,6 +114,10 @@ func verifyExporterConfig(config *ExporterConfig) error {
 			if execution.Command == "" {
 				return errors.New("Missing field 'command' in 'executions' configuration of metric " + string(i) +
 					" and execution " + string(j))
+			}
+
+			if execution.Timeout == 0 {
+				config.Metrics[i].Executions[j].Timeout = 1
 			}
 
 			// Check 'labels'. Can be omitted only if there is a single element

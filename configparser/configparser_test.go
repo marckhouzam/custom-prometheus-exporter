@@ -403,6 +403,53 @@ metrics:
 	assert.ErrorContains(t, c.ParseConfig(), "Missing field 'command' in 'executions' configuration")
 }
 
+func TestMissingMetricExecutionTimeout(t *testing.T) {
+	data := `
+name: test-exporter
+port: 12345
+endpoint: /test
+metrics:
+- name: test_gauge_values
+  help: Some values
+  type: gauge
+  executions:
+  - type: sh
+    command: sleep 5
+#    timeout: 3                # Missing field should default to 1 second
+    labels:
+      order: first
+`
+	filename := createFile(t, data)
+	defer removeFile(filename)
+
+	c := Config{ConfigFiles: []string{filename}}
+	assert.NilError(t, c.ParseConfig())
+	assert.Equal(t, c.Exporters[0].Metrics[0].Executions[0].Timeout, uint(1))
+}
+
+func TestNegativeMetricExecutionTimeout(t *testing.T) {
+	data := `
+name: test-exporter
+port: 12345
+endpoint: /test
+metrics:
+- name: test_gauge_values
+  help: Some values
+  type: gauge
+  executions:
+  - type: sh
+    command: sleep 5
+    timeout: -3                # Negative timeout should cause an error
+    labels:
+      order: first
+`
+	filename := createFile(t, data)
+	defer removeFile(filename)
+
+	c := Config{ConfigFiles: []string{filename}}
+	assert.ErrorContains(t, c.ParseConfig(), "unmarshal error")
+}
+
 func TestMissingMetricExecutionLabelsForMoreThanOneExec(t *testing.T) {
 	data := `
 name: test-exporter
