@@ -170,14 +170,15 @@ Natively, after you've compiled it:
 ```
 
 ### Docker
-You an also use Docker:
+You an also use Docker.  An example Dockerfile is provided for the example exporters.  However, you may need to modify that Dockerfile for your own exporter needs, to make sure all tools your exporters need will be part of the docker image:
 ```
-docker build -t custom-prometheus-exporter .
+docker build -t custom-prometheus-exporter -f <yourDockerfile> .
 docker run --rm -d \
     --name custom-prometheus-exporter -p <port>:<yourExporterPort> \
     -v <yourExporterConfigFile.yaml>:/tmp/exporter.yaml \
     custom-prometheus-exporter -f /tmp/exporterConfig.yaml
 ```
+To run the customer-prometheus-exporter example exporters in docker see the example further above.
 
 ### Running automated tests
 
@@ -196,6 +197,5 @@ go test ./...
 
 - [ ] Add more automated Tests
 - [ ] Support other types of metrics (e.g., Counter)
-- [ ] Complete /-/reload support
 - [ ] Support for native execution instead of shell command (e.g., running a script)
 - [ ] Add a Kubernetes Helm chart
