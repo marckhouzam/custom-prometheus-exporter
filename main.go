@@ -83,9 +83,11 @@ func handleReloadEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO Valid configuration: stop all exporters and restart new ones
-	w.Write([]byte(`The reload endpoint is NOT SUPPORTED yet`))
+	if err = exporter.StopExporters(); err != nil {
+		log.Fatal("Terminal error while reloading exporters: ", err)
+	}
 
+	exporter.CreateExporters(config.Exporters)
 }
 
 func handleRootEndpoint(w http.ResponseWriter, r *http.Request) {

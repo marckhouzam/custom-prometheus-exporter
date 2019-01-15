@@ -1,6 +1,7 @@
 package exporter
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -21,6 +22,8 @@ type metricsCollector struct {
 	// TODO should support Counter not just Gauge
 	gaugeVecs []*prometheus.GaugeVec
 }
+
+var exporterServers []*http.Server
 
 func getKeys(mymap map[string]string) []string {
 	i := 0
@@ -50,7 +53,9 @@ func handleRootEndpoint(name string, endpoint string) func(http.ResponseWriter, 
 // in the configuration
 func CreateExporters(exportersConf []configparser.ExporterConfig) {
 
-	for _, e := range exportersConf {
+	exporterServers = make([]*http.Server, len(exportersConf))
+
+	for i, e := range exportersConf {
 		exporter := e
 		metricsCollector := metricsCollector{}
 		metricsCollector.addMetrics(exporter.Metrics)
@@ -60,17 +65,57 @@ func CreateExporters(exportersConf []configparser.ExporterConfig) {
 		registry := prometheus.NewRegistry()
 		registry.MustRegister(&metricsCollector)
 
-		// Don't block, since we can run multiple exporters.
+		// Use go routine so as to not block, since we can run multiple exporters.
+		index := i
 		go func() {
 			handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
 
+			// Need to call serveMux to be able to run multiple servers at the same time
 			server := http.NewServeMux()
+			// Handle the endpoint serving the metrics
 			server.Handle(fmt.Sprintf("%s", exporter.Endpoint), handler)
+			// Give some info on the root endpoint
 			server.HandleFunc("/", handleRootEndpoint(exporter.Name, exporter.Endpoint))
+
+			// Create a server object which we can later Shutdown()
+			exporterServers[index] = &http.Server{
+				Addr:    fmt.Sprintf(":%d", exporter.Port),
+				Handler: server,
+			}
 			log.Println("Listening on port", exporter.Port, "and endpoint", exporter.Endpoint)
-			log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", exporter.Port), server))
+			exporterServers[index].ListenAndServe()
 		}()
 	}
+}
+
+// StopExporters gracefully shutsdown every exporter, allowing a maximum
+// 5 seconds for the shutdown to complete
+func StopExporters() error {
+	// Do the shutdowns in parallel for efficiency
+	var wg sync.WaitGroup
+	var shutdownErr error
+
+	for _, s := range exporterServers {
+		wg.Add(1)
+
+		server := s
+		go func() {
+			// Decrement the counter when the goroutine completes.
+			defer wg.Done()
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			if err := server.Shutdown(ctx); err != nil {
+				shutdownErr = err
+			}
+		}()
+
+	}
+	// Wait for all shutdowns to complete
+	wg.Wait()
+
+	return shutdownErr
 }
 
 func (m *metricsCollector) addMetrics(metrics []configparser.MetricsConfig) {
