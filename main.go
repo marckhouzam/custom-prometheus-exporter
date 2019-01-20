@@ -37,16 +37,21 @@ var (
 )
 
 func parseFlags() {
-	flag.IntVar(&port, "p", defaultMainPort, "The main http port for the global custom-prometheus-exporter")
-	flag.Var(&configFiles, "f", "A configuration file defining some exporters.\n"+
+	// Use a new flag set to allow tests to call this method more than once
+	f := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+	// Make sure configFiles is empty at each call (to allow tests to call this more than once)
+	configFiles = arrayFlag{}
+
+	f.IntVar(&port, "p", defaultMainPort, "The main http port for the global custom-prometheus-exporter")
+	f.Var(&configFiles, "f", "A configuration file defining some exporters.\n"+
 		"This flag can be used multiple times to include multiple files.")
 
-	flag.Parse()
+	f.Parse(os.Args[1:])
 
 	if len(configFiles) == 0 {
 		fmt.Println("You must specify at least one configuration file.")
 		fmt.Println()
-		flag.Usage()
+		f.Usage()
 		os.Exit(1)
 	}
 }
