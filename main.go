@@ -136,8 +136,7 @@ func main() {
 
 	config := configparser.Config{ConfigFiles: configFiles}
 
-	err := config.ParseConfig()
-	if err != nil {
+	if err := config.ParseConfig(); err != nil {
 		log.Fatal("Error parsing configuration: ", err)
 	}
 
