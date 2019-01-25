@@ -23,9 +23,9 @@ curl localhost:12345/test
 
 ## Configuration
 
-The Custom Prometheus Exporter take one or more YAML-configuration files, which specify the metrics that are to be collected and how to collect them.  Example configurations can be found in the directory ```example-configurations```.
+The Custom Prometheus Exporter takes one or more YAML-configuration files, which specify the metrics that are to be collected and how to collect them.  Example configurations can be found in the directory ```example-configurations```.
 
-Here is a sample configuration.  This configuration will create a "docker-exporter", which can be scraped on port ```9550``` and endpoint ```/metrics```.  This exporter generates a single metric (named: ```docker_container_states_containers```) that provides the count of containers in their three possible states (Running, Stopped, Paused). This metric is collected on each call to the ```/metrics``` endpoint using the three sh-shell commands specified in ```executions```.
+Here is a sample configuration.  This configuration will create a "docker-exporter", which can be scraped on port ```9550``` and endpoint ```/metrics```.  This exporter generates different metrics, for example the ```docker_container_states_containers``` metric which provides the count of containers in their three possible states (Running, Stopped, Paused). The metrics are collected on each call to the ```/metrics``` endpoint using the three sh-shell commands specified in ```executions```.
 
 ```
 name: docker-exporter
@@ -59,15 +59,15 @@ The generated metric looks like this:
 # HELP docker_container_states_containers The count of containers in various states
 # TYPE docker_container_states_containers gauge
 docker_container_states_containers{state="Paused"} 0
-docker_container_states_containers{state="Running"} 0
+docker_container_states_containers{state="Running"} 10
 docker_container_states_containers{state="Stopped"} 4
 ```
 
 ### Multiple exporters
 
-The Custom Prometheus Exporter allows you to define many exporters at once. Each exporter **must** be in its own YAML configuration file. All defined exporters will be run concurrently and be accessible using their own configuration-specified port and endpoint.  If you want to create metrics that are logically different, it is recommended to use multiple exporters instead of a single exporter lumping all the unrelated metrics together.  Besides cleanly separating the definition of each logical exporter, the separation also allows each exporter can be scraped at different intervals.
+The Custom Prometheus Exporter allows you to define many exporters at once. Each exporter **must** be in its own YAML configuration file. All defined exporters will be run concurrently and be accessible using their own configuration-specified port and endpoint.  If you want to create metrics that are logically different, it is recommended to use multiple exporters instead of a single exporter lumping all the unrelated metrics together.  Besides cleanly separating the definition of each logical exporter, the separation also allows each exporter to be scraped at different intervals.
 
-You may instead choose to run the Custom Prometheus Exporter multiple times, one for each exporter you want to create.  This choice is entirely up to you.
+You may instead choose to run the Custom Prometheus Exporter multiple times, one for each exporter you want to create.  However, having a single central Custom Prometheus Exporter provides a single set of HTTP endpoints to access information about the different custom exporters that have been instantiated (see [this section](#main-custom-prometheus-exporter-endpoints)).
 
 Here is how to run both example exporters together, using Docker:
 
