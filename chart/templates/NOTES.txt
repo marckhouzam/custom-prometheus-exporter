@@ -1,0 +1,4 @@
+Custom Prometheus Exporter installed.
+
+The Custom Prometheus Exporter can be scraped from within your cluster using the following identifier:
+  {{ template "fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.service.port }}
