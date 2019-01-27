@@ -62,7 +62,6 @@ func (c *Config) verifyExporterConfig(exporter *ExporterConfig) error {
 	// If 'port' is absent, use the MainPort
 	if exporter.Port == 0 {
 		exporter.Port = c.MainPort
-		return nil
 	}
 
 	// If 'endpoint' is absent, use the the default endpoint
@@ -124,7 +123,8 @@ func (c *Config) verifyExporterConfig(exporter *ExporterConfig) error {
 			// If 'timeout' was omitted use the default timeout
 			if execution.Timeout == nil {
 				defaultT := defaultTimeout
-				execution.Timeout = &defaultT
+				// Cannot use execution.Timeout as it is a copy of the actual config (since we use range in the for loop)
+				exporter.Metrics[i].Executions[j].Timeout = &defaultT
 			}
 
 			// Check 'labels'. Can be omitted only if there is a single element

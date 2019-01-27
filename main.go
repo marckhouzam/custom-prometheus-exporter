@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/marckhouzam/custom-prometheus-exporter/configparser"
-	"github.com/marckhouzam/custom-prometheus-exporter/exporter"
 	"github.com/marckhouzam/custom-prometheus-exporter/webservers"
 )
 
@@ -64,7 +63,7 @@ func main() {
 		log.Fatal("Error parsing configuration: ", err)
 	}
 
-	exporter.CreateExporters(config)
+	webservers.CreateExporters(&config)
 
 	webservers.CreateMainServer()
 }

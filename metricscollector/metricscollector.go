@@ -1,4 +1,4 @@
-package exporter
+package metricscollector
 
 import (
 	"log"
@@ -9,12 +9,11 @@ import (
 	"time"
 
 	"github.com/marckhouzam/custom-prometheus-exporter/configparser"
-	"github.com/marckhouzam/custom-prometheus-exporter/webservers"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-type metricsCollector struct {
+// MetricsCollector -
+type MetricsCollector struct {
 	mutex         sync.RWMutex
 	metricsConfig []configparser.MetricsConfig
 	gaugeVecs     []*prometheus.GaugeVec
@@ -30,25 +29,8 @@ func getKeys(mymap map[string]string) []string {
 	return keys
 }
 
-// CreateExporters instantiates each exporter as requested
-// in the configuration
-func CreateExporters(config configparser.Config) {
-
-	for _, exporterCfg := range config.Exporters {
-		metricsCollector := metricsCollector{}
-		metricsCollector.addMetrics(exporterCfg.Metrics)
-
-		// Don't use the default registry to avoid getting the go collector
-		// and all its metrics
-		registry := prometheus.NewRegistry()
-		registry.MustRegister(&metricsCollector)
-		handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
-
-		webservers.CreateExporterWebserver(&handler, &exporterCfg)
-	}
-}
-
-func (m *metricsCollector) addMetrics(metrics []configparser.MetricsConfig) {
+//AddMetrics -
+func (m *MetricsCollector) AddMetrics(metrics []configparser.MetricsConfig) {
 	m.metricsConfig = metrics
 	m.gaugeVecs = make([]*prometheus.GaugeVec, len(metrics))
 
@@ -67,7 +49,7 @@ func (m *metricsCollector) addMetrics(metrics []configparser.MetricsConfig) {
 	}
 }
 
-func (m *metricsCollector) getMetrics() {
+func (m *MetricsCollector) getMetrics() {
 	for i, metric := range m.metricsConfig {
 		for _, execution := range metric.Executions {
 			cmd := exec.Command(execution.ExecutionType, "-c", execution.Command)
@@ -108,14 +90,14 @@ func (m *metricsCollector) getMetrics() {
 }
 
 // Describe - Implements Collector.Describe
-func (m *metricsCollector) Describe(ch chan<- *prometheus.Desc) {
+func (m *MetricsCollector) Describe(ch chan<- *prometheus.Desc) {
 	for _, m := range m.gaugeVecs {
 		m.Describe(ch)
 	}
 }
 
 // Collect - Implements Collector.Collect
-func (m *metricsCollector) Collect(ch chan<- prometheus.Metric) {
+func (m *MetricsCollector) Collect(ch chan<- prometheus.Metric) {
 	m.mutex.Lock() // To protect metrics from concurrent collects.
 	defer m.mutex.Unlock()
 

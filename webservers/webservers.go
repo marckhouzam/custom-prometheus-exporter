@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/marckhouzam/custom-prometheus-exporter/configparser"
+	"github.com/marckhouzam/custom-prometheus-exporter/metricscollector"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const (
@@ -17,8 +20,8 @@ const (
 )
 
 var (
-	config     configparser.Config
-	webServers = make([]*http.Server, 1)
+	configuration *configparser.Config
+	webServers    = make([]*http.Server, 1)
 )
 
 func handleWrongReloadEndpoint(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +45,10 @@ func handleReloadEndpoint(w http.ResponseWriter, r *http.Request) {
 	// POST method requesting a reload
 
 	// Parse the new configuration, if it is not valid, ignore it and give an error message.
-	newConfig := configparser.Config{ConfigFiles: config.ConfigFiles}
+	newConfig := configparser.Config{
+		MainPort:    configuration.MainPort,
+		ConfigFiles: configuration.ConfigFiles,
+	}
 
 	err := newConfig.ParseConfig()
 	if err != nil {
@@ -53,11 +59,12 @@ func handleReloadEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// if err = StopWebServers(); err != nil {
-	// 	log.Fatal("Terminal error while stopping webservers for exporters: ", err)
-	// }
+	// New configuration is valid, stop the web servers and restart them
+	if err = shutdownWebServers(); err != nil {
+		log.Fatal("Terminal error while stopping webservers for exporters: ", err)
+	}
 
-	// CreateExporterServers(newConfig.Exporters)
+	CreateExporters(&newConfig)
 }
 
 func handleMainRootEndpoint(w http.ResponseWriter, r *http.Request) {
@@ -80,7 +87,7 @@ func handleMainRootEndpoint(w http.ResponseWriter, r *http.Request) {
 func handleValidateEndpoint(w http.ResponseWriter, r *http.Request) {
 	// Parse the new configuration and let the user know if it is valid.
 	log.Println(validateEndpoint, "has been called")
-	newConfig := configparser.Config{ConfigFiles: config.ConfigFiles}
+	newConfig := configparser.Config{ConfigFiles: configuration.ConfigFiles}
 
 	var msg string
 	err := newConfig.ParseConfig()
@@ -116,6 +123,26 @@ func handleExporterRootEndpoint(name string, endpoint string) func(http.Response
 	}
 }
 
+// CreateExporters instantiates each exporter as requested
+// in the configuration
+func CreateExporters(config *configparser.Config) {
+	// Store the configuration
+	configuration = config
+
+	for _, exporterCfg := range configuration.Exporters {
+		metricsCollector := metricscollector.MetricsCollector{}
+		metricsCollector.AddMetrics(exporterCfg.Metrics)
+
+		// Don't use the default registry to avoid getting the go collector
+		// and all its metrics
+		registry := prometheus.NewRegistry()
+		registry.MustRegister(&metricsCollector)
+		handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
+
+		createExporterWebserver(&handler, exporterCfg)
+	}
+}
+
 // CreateMainServer -
 func CreateMainServer() {
 	// Setup main server
@@ -124,17 +151,17 @@ func CreateMainServer() {
 	http.HandleFunc(reloadEndpoint, handleReloadEndpoint)
 	http.HandleFunc(validateEndpoint, handleValidateEndpoint)
 
-	log.Println("Main server listening on port", config.MainPort)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", config.MainPort), nil))
+	log.Println("Main server listening on port", configuration.MainPort)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", configuration.MainPort), nil))
 }
 
 // CreateExporterWebserver -
-func CreateExporterWebserver(handler *http.Handler, exporterCfg *configparser.ExporterConfig) {
-	if exporterCfg.Port == config.MainPort {
-		// // The exporter should re-use the main port
+func createExporterWebserver(handler *http.Handler, exporterCfg configparser.ExporterConfig) {
+	if exporterCfg.Port == configuration.MainPort {
+		// The exporter should re-use the main port
 		// t := mainServer.Handler.(*http.ServeMux)
-		// t.Handle(fmt.Sprintf("%s", exporterCfg.Endpoint), handler)
-		// log.Println(exporterCfg.Name, "listening on main port and endpoint", exporterCfg.Endpoint)
+		http.Handle(fmt.Sprintf("%s", exporterCfg.Endpoint), *handler)
+		log.Println(exporterCfg.Name, "listening on main port and endpoint", exporterCfg.Endpoint)
 	} else {
 		// Use go routine so as to not block, since we can run multiple exporters.
 		go func() {
@@ -159,7 +186,7 @@ func CreateExporterWebserver(handler *http.Handler, exporterCfg *configparser.Ex
 
 // ShutdownWebServers gracefully shutsdown every exporter, allowing a maximum
 // 5 seconds for the shutdown to complete
-func ShutdownWebServers() error {
+func shutdownWebServers() error {
 	// Do the shutdowns in parallel for efficiency
 	var wg sync.WaitGroup
 	var shutdownErr error

@@ -114,6 +114,8 @@ metrics:
 	assert.NilError(t, c.ParseConfig())
 	// The port should remain unset as an indicator that the main port should be used
 	assert.Equal(t, c.Exporters[0].Port, 0)
+	// Check that some other field of the config are correct
+	assert.Equal(t, *c.Exporters[0].Metrics[0].Executions[0].Timeout, defaultTimeout)
 }
 
 func TestMissingEndpoint(t *testing.T) {
@@ -163,6 +165,8 @@ metrics:
 	assert.NilError(t, c.ParseConfig())
 	// Make sure / was added
 	assert.Equal(t, c.Exporters[0].Endpoint, "/"+endpoint)
+	// Check that some other field of the config are correct
+	assert.Equal(t, *c.Exporters[0].Metrics[0].Executions[0].Timeout, defaultTimeout)
 }
 
 func TestMissingMetrics(t *testing.T) {
@@ -417,7 +421,7 @@ metrics:
   executions:
   - type: sh
     command: sleep 5
-#    timeout: 3                # Missing field should default to 1000 milliseconds
+#    timeout: 3                # Missing field should default to defaultTimeout
     labels:
       order: first
 `
@@ -426,7 +430,7 @@ metrics:
 
 	c := Config{ConfigFiles: []string{filename}}
 	assert.NilError(t, c.ParseConfig())
-	assert.Equal(t, *c.Exporters[0].Metrics[0].Executions[0].Timeout, uint(1000))
+	assert.Equal(t, *c.Exporters[0].Metrics[0].Executions[0].Timeout, defaultTimeout)
 }
 
 func TestNegativeMetricExecutionTimeout(t *testing.T) {
