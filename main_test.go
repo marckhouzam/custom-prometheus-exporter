@@ -85,7 +85,7 @@ func TestFlagsValid(t *testing.T) {
 	os.Args = []string{".", "-p", validPortStr, "-f", configFile}
 	parseFlags()
 
-	assert.Equal(t, port, validPort)
+	assert.Equal(t, MainPort, validPort)
 	assert.Equal(t, len(configFiles), 1)
 	assert.Equal(t, configFiles[0], configFile)
 }
@@ -96,7 +96,7 @@ func TestFlagsDefaultPort(t *testing.T) {
 	os.Args = []string{".", "-f", configFile}
 	parseFlags()
 
-	assert.Equal(t, port, defaultMainPort)
+	assert.Equal(t, MainPort, defaultMainPort)
 	assert.Equal(t, len(configFiles), 1)
 	assert.Equal(t, configFiles[0], configFile)
 }

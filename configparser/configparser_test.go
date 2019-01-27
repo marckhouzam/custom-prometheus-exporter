@@ -94,7 +94,7 @@ metrics:
 func TestMissingPort(t *testing.T) {
 	data := `
 name: test-exporter
-#port: 12345          # Missing field should cause error
+#port: 12345          # Missing port should default to port of main program
 endpoint: /test
 metrics:
 - name: test_gauge_values
@@ -111,7 +111,9 @@ metrics:
 	defer removeFile(filename)
 
 	c := Config{ConfigFiles: []string{filename}}
-	assert.ErrorContains(t, c.ParseConfig(), "Missing field 'port' in top configuration")
+	assert.NilError(t, c.ParseConfig())
+	// The port should remain unset as an indicator that the main port should be used
+	assert.Equal(t, c.Exporters[0].Port, 0)
 }
 
 func TestMissingEndpoint(t *testing.T) {

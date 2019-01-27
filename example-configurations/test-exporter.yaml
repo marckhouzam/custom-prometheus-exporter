@@ -1,5 +1,4 @@
 name: test-exporter
-port: 12345
 endpoint: /test
 metrics:
 - name: test_gauge_values

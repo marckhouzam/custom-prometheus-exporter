@@ -1,10 +1,7 @@
 package exporter
 
 import (
-	"context"
-	"fmt"
 	"log"
-	"net/http"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -12,6 +9,7 @@ import (
 	"time"
 
 	"github.com/marckhouzam/custom-prometheus-exporter/configparser"
+	"github.com/marckhouzam/custom-prometheus-exporter/webservers"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -19,11 +17,8 @@ import (
 type metricsCollector struct {
 	mutex         sync.RWMutex
 	metricsConfig []configparser.MetricsConfig
-	// TODO should support Counter not just Gauge
-	gaugeVecs []*prometheus.GaugeVec
+	gaugeVecs     []*prometheus.GaugeVec
 }
-
-var exporterServers []*http.Server
 
 func getKeys(mymap map[string]string) []string {
 	i := 0
@@ -35,87 +30,22 @@ func getKeys(mymap map[string]string) []string {
 	return keys
 }
 
-func handleRootEndpoint(name string, endpoint string) func(http.ResponseWriter, *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`<html>
-							<head><title>` + name + `</title></head>
-							<body>
-							   <h1>` + name + `</h1>
-							   <p>This exporter was created in YAML using the <a href=https://github.com/marckhouzam/custom-prometheus-exporter>Custom Prometheus Exporter</a></p>
-							   <p><a href='` + endpoint + `'>Metrics</a></p>
-							   </body>
-							</html>
-						  `))
-	}
-}
-
 // CreateExporters instantiates each exporter as requested
 // in the configuration
-func CreateExporters(exportersConf []configparser.ExporterConfig) {
+func CreateExporters(config configparser.Config) {
 
-	exporterServers = make([]*http.Server, len(exportersConf))
-
-	for i, e := range exportersConf {
-		exporter := e
+	for _, exporterCfg := range config.Exporters {
 		metricsCollector := metricsCollector{}
-		metricsCollector.addMetrics(exporter.Metrics)
+		metricsCollector.addMetrics(exporterCfg.Metrics)
 
 		// Don't use the default registry to avoid getting the go collector
 		// and all its metrics
 		registry := prometheus.NewRegistry()
 		registry.MustRegister(&metricsCollector)
+		handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
 
-		// Use go routine so as to not block, since we can run multiple exporters.
-		index := i
-		go func() {
-			handler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{})
-
-			// Need to call serveMux to be able to run multiple servers at the same time
-			server := http.NewServeMux()
-			// Handle the endpoint serving the metrics
-			server.Handle(fmt.Sprintf("%s", exporter.Endpoint), handler)
-			// Give some info on the root endpoint
-			server.HandleFunc("/", handleRootEndpoint(exporter.Name, exporter.Endpoint))
-
-			// Create a server object which we can later Shutdown()
-			exporterServers[index] = &http.Server{
-				Addr:    fmt.Sprintf(":%d", exporter.Port),
-				Handler: server,
-			}
-			log.Println("Listening on port", exporter.Port, "and endpoint", exporter.Endpoint)
-			exporterServers[index].ListenAndServe()
-		}()
+		webservers.CreateExporterWebserver(&handler, &exporterCfg)
 	}
-}
-
-// StopExporters gracefully shutsdown every exporter, allowing a maximum
-// 5 seconds for the shutdown to complete
-func StopExporters() error {
-	// Do the shutdowns in parallel for efficiency
-	var wg sync.WaitGroup
-	var shutdownErr error
-
-	for _, s := range exporterServers {
-		wg.Add(1)
-
-		server := s
-		go func() {
-			// Decrement the counter when the goroutine completes.
-			defer wg.Done()
-
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-
-			if err := server.Shutdown(ctx); err != nil {
-				shutdownErr = err
-			}
-		}()
-
-	}
-	// Wait for all shutdowns to complete
-	wg.Wait()
-
-	return shutdownErr
 }
 
 func (m *metricsCollector) addMetrics(metrics []configparser.MetricsConfig) {

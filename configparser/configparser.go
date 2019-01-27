@@ -15,10 +15,13 @@ const (
 )
 
 // Config is the structure that holds the configuration of the custom-prometheus-exporter
-// as defined by the user.
 type Config struct {
+	// The port used by the main webserver and possibly by some exporters
+	MainPort int
+
 	// The path of each configuration file defining the exporters
 	ConfigFiles []string
+
 	// The result of parsing the configuration files, which provides
 	// all necessary details to create the exporters
 	Exporters []ExporterConfig
@@ -35,7 +38,7 @@ type ExporterConfig struct {
 	Metrics  []MetricsConfig
 }
 
-// MetricsConfig -
+// MetricsConfig is the structure that contains the information about each metric
 type MetricsConfig struct {
 	// All fields below must be exported (start with a capital letter)
 	// so that the yaml.UnmarshalStrict() method can set them.
@@ -50,34 +53,35 @@ type MetricsConfig struct {
 	}
 }
 
-func verifyExporterConfig(config *ExporterConfig) error {
+func (c *Config) verifyExporterConfig(exporter *ExporterConfig) error {
 	// Make sure 'name' is present
-	if config.Name == "" {
+	if exporter.Name == "" {
 		return errors.New("Missing field 'name' in top configuration")
 	}
 
-	// Make sure 'port' is present
-	if config.Port == 0 {
-		return errors.New("Missing field 'port' in top configuration")
+	// If 'port' is absent, use the MainPort
+	if exporter.Port == 0 {
+		exporter.Port = c.MainPort
+		return nil
 	}
 
 	// If 'endpoint' is absent, use the the default endpoint
-	if config.Endpoint == "" {
-		config.Endpoint = defaultEndpoint
+	if exporter.Endpoint == "" {
+		exporter.Endpoint = defaultEndpoint
 		return nil
 	}
 
 	// Add '/' at the start of 'endpoint' if it is missing
-	if config.Endpoint[0] != '/' {
-		config.Endpoint = strings.Join([]string{"/", config.Endpoint}, "")
+	if exporter.Endpoint[0] != '/' {
+		exporter.Endpoint = strings.Join([]string{"/", exporter.Endpoint}, "")
 	}
 
 	// Make sure 'metrics' is present
-	if len(config.Metrics) == 0 {
+	if len(exporter.Metrics) == 0 {
 		return errors.New("Missing field 'metrics' in top configuration")
 	}
 
-	for i, metric := range config.Metrics {
+	for i, metric := range exporter.Metrics {
 		if metric.Name == "" {
 			return errors.New("Missing field 'name' in 'metrics' configuration of metric " + string(i))
 		}
@@ -120,7 +124,7 @@ func verifyExporterConfig(config *ExporterConfig) error {
 			// If 'timeout' was omitted use the default timeout
 			if execution.Timeout == nil {
 				defaultT := defaultTimeout
-				config.Metrics[i].Executions[j].Timeout = &defaultT
+				execution.Timeout = &defaultT
 			}
 
 			// Check 'labels'. Can be omitted only if there is a single element
@@ -134,7 +138,7 @@ func verifyExporterConfig(config *ExporterConfig) error {
 	return nil
 }
 
-// ParseConfig parses the YAML files present in configDir which provide
+// ParseConfig parses the YAML config files which provide
 // the definition and configuration of the exporters
 func (c *Config) ParseConfig() error {
 	// Check if all files exist
@@ -159,7 +163,7 @@ func (c *Config) ParseConfig() error {
 		}
 
 		// Do some sanity checks on the configuration
-		if err = verifyExporterConfig(&newExporter); err != nil {
+		if err = c.verifyExporterConfig(&newExporter); err != nil {
 			return err
 		}
 
