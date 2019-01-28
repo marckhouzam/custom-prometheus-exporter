@@ -63,7 +63,6 @@ func main() {
 		log.Fatal("Error parsing configuration: ", err)
 	}
 
-	webservers.CreateExporters(&config)
-
-	webservers.CreateMainServer()
+	// Blocks forever
+	webservers.CreateListenAndServe(config)
 }

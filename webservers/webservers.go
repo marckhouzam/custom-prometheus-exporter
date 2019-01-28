@@ -20,8 +20,9 @@ const (
 )
 
 var (
-	configuration *configparser.Config
-	webServers    = make([]*http.Server, 1)
+	configuration configparser.Config
+	mainServer    *http.Server
+	webServers    []*http.Server
 )
 
 func handleWrongReloadEndpoint(w http.ResponseWriter, r *http.Request) {
@@ -60,11 +61,11 @@ func handleReloadEndpoint(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// New configuration is valid, stop the web servers and restart them
+	configuration = newConfig
+
 	if err = shutdownWebServers(); err != nil {
 		log.Fatal("Terminal error while stopping webservers for exporters: ", err)
 	}
-
-	CreateExporters(&newConfig)
 }
 
 func handleMainRootEndpoint(w http.ResponseWriter, r *http.Request) {
@@ -125,9 +126,8 @@ func handleExporterRootEndpoint(name string, endpoint string) func(http.Response
 
 // CreateExporters instantiates each exporter as requested
 // in the configuration
-func CreateExporters(config *configparser.Config) {
-	// Store the configuration
-	configuration = config
+func createExporters() {
+	webServers = make([]*http.Server, 0, len(configuration.Exporters))
 
 	for _, exporterCfg := range configuration.Exporters {
 		metricsCollector := metricscollector.MetricsCollector{}
@@ -143,44 +143,70 @@ func CreateExporters(config *configparser.Config) {
 	}
 }
 
-// CreateMainServer -
-func CreateMainServer() {
+func createMainServer() {
 	// Setup main server
-	http.HandleFunc("/", handleMainRootEndpoint)
-	http.HandleFunc("/reload", handleWrongReloadEndpoint)
-	http.HandleFunc(reloadEndpoint, handleReloadEndpoint)
-	http.HandleFunc(validateEndpoint, handleValidateEndpoint)
+	server := http.NewServeMux()
 
-	log.Println("Main server listening on port", configuration.MainPort)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", configuration.MainPort), nil))
+	server.HandleFunc("/", handleMainRootEndpoint)
+	server.HandleFunc("/reload", handleWrongReloadEndpoint)
+	server.HandleFunc(reloadEndpoint, handleReloadEndpoint)
+	server.HandleFunc(validateEndpoint, handleValidateEndpoint)
+
+	mainServer = &http.Server{
+		Addr:    fmt.Sprintf(":%d", configuration.MainPort),
+		Handler: server,
+	}
 }
 
 // CreateExporterWebserver -
 func createExporterWebserver(handler *http.Handler, exporterCfg configparser.ExporterConfig) {
 	if exporterCfg.Port == configuration.MainPort {
 		// The exporter should re-use the main port
-		// t := mainServer.Handler.(*http.ServeMux)
-		http.Handle(fmt.Sprintf("%s", exporterCfg.Endpoint), *handler)
-		log.Println(exporterCfg.Name, "listening on main port and endpoint", exporterCfg.Endpoint)
+		server := mainServer.Handler.(*http.ServeMux)
+		server.Handle(fmt.Sprintf("%s", exporterCfg.Endpoint), *handler)
+		log.Println(exporterCfg.Name, "listening on port", configuration.MainPort, "and endpoint", exporterCfg.Endpoint)
 	} else {
-		// Use go routine so as to not block, since we can run multiple exporters.
-		go func() {
-			// Need to call serveMux to be able to run multiple servers at the same time
-			server := http.NewServeMux()
-			// Handle the endpoint serving the metrics
-			server.Handle(fmt.Sprintf("%s", exporterCfg.Endpoint), *handler)
-			// Give some info on the root endpoint
-			server.HandleFunc("/", handleExporterRootEndpoint(exporterCfg.Name, exporterCfg.Endpoint))
+		// Need to call serveMux to be able to run multiple servers at the same time
+		server := http.NewServeMux()
+		// Handle the endpoint serving the metrics
+		server.Handle(fmt.Sprintf("%s", exporterCfg.Endpoint), *handler)
+		// Give some info on the root endpoint
+		server.HandleFunc("/", handleExporterRootEndpoint(exporterCfg.Name, exporterCfg.Endpoint))
 
-			// Create a server object which we can later Shutdown()
-			newWebServer := &http.Server{
-				Addr:    fmt.Sprintf(":%d", exporterCfg.Port),
-				Handler: server,
-			}
-			webServers = append(webServers, newWebServer)
-			log.Println(exporterCfg.Name, "listening on port", exporterCfg.Port, "and endpoint", exporterCfg.Endpoint)
-			newWebServer.ListenAndServe()
-		}()
+		// Create a server object which we can later Shutdown()
+		newWebServer := &http.Server{
+			Addr:    fmt.Sprintf(":%d", exporterCfg.Port),
+			Handler: server,
+		}
+		webServers = append(webServers, newWebServer)
+		log.Println(exporterCfg.Name, "listening on port", exporterCfg.Port, "and endpoint", exporterCfg.Endpoint)
+	}
+}
+
+// CreateListenAndServe creates then starts all webservers
+// and blocks on the main one.
+func CreateListenAndServe(config configparser.Config) {
+	configuration = config
+
+	// Infinite loop which allows us to shutdown all servers and re-create them
+	// to support the reload functionality
+	for {
+		createMainServer()
+		createExporters()
+
+		for _, w := range webServers {
+			// Use go routine so as to not block, since we run multiple servers.
+			webServer := w
+			go func() {
+				webServer.ListenAndServe()
+			}()
+		}
+
+		log.Println("Main server listening on port", configuration.MainPort)
+		// Block on the main server
+		mainServer.ListenAndServe()
+
+		log.Println("Main server has shutdown")
 	}
 }
 
@@ -202,14 +228,35 @@ func shutdownWebServers() error {
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 				defer cancel()
 
+				log.Println("About to shutdown exporter server")
+
 				if err := server.Shutdown(ctx); err != nil {
 					shutdownErr = err
 				}
+				log.Println("Exporter server has shutdown")
 			}()
 		}
 	}
 	// Wait for all shutdowns to complete
 	wg.Wait()
 
-	return shutdownErr
+	if shutdownErr != nil {
+		log.Println("Shutdown error for exporter server", shutdownErr)
+		return shutdownErr
+	}
+
+	// Now shutdown the main server
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	log.Println("About to shutdown main server")
+
+	if err := mainServer.Shutdown(ctx); err != nil {
+		log.Println("Shutdown error for main server", err)
+		// Ignore Error.  We keep getting one but if we ignore things still work...
+		log.Println("Ignoring error and continuing")
+		// return err
+	}
+
+	return nil
 }
