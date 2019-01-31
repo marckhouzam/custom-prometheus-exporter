@@ -65,7 +65,7 @@ docker_container_states_containers{state="Stopped"} 4
 
 ### Multiple exporters
 
-The Custom Prometheus Exporter allows you to define many exporters at once. Each exporter **must** be in its own YAML configuration file. All defined exporters will be run concurrently and be accessible using their own configuration-specified port and endpoint.  If you want to create metrics that are logically different, it is recommended to use multiple exporters instead of a single exporter lumping all the unrelated metrics together.  Besides cleanly separating the definition of each logical exporter, the separation also allows each exporter to be scraped at different intervals.
+The Custom Prometheus Exporter allows you to define many exporters at once. Each exporter **must** be in its own YAML configuration file. All defined exporters will be run concurrently and be accessible using their own configuration-specified endpoint and optionally using their own specific port.  If you want to create metrics that are logically different, it is recommended to use multiple exporters instead of a single exporter lumping all the unrelated metrics together.  Besides cleanly separating the definition of each logical exporter, the separation also allows each exporter to be scraped at different intervals.
 
 You may instead choose to run the Custom Prometheus Exporter multiple times, one for each exporter you want to create.  However, having a single central Custom Prometheus Exporter provides a single set of HTTP endpoints to access information about the different custom exporters that have been instantiated (see [this section](#main-custom-prometheus-exporter-endpoints)).
 
@@ -98,7 +98,7 @@ The format of the YAML configuration is the following:
 
 ```
 name: string          # A name for the exporter - MANDATORY
-port: int             # The TCP port serving the metrics - MANDATORY
+port: int             # The TCP port serving the metrics - OPTIONAL, defaults to main port
 endpoint: string      # The endpoint serving the metrics - OPTIONAL, defaults to /metrics
 metrics:              # An array of metrics to be generated - MANDATORY
 - name: string        # The published name of the metric - MANDATORY
@@ -170,7 +170,7 @@ Natively, after you've compiled it:
 ```
 
 ### Docker
-You an also use Docker.  An example Dockerfile is provided for the example exporters.  However, you may need to modify that Dockerfile for your own exporter needs, to make sure all tools your exporters need will be part of the docker image:
+You can also use Docker.  An example Dockerfile is provided for the example exporters.  However, you may need to modify that Dockerfile for your own exporter needs, to make sure all tools your exporters need will be part of the docker image:
 ```
 docker build -t custom-prometheus-exporter -f <yourDockerfile> .
 docker run --rm -d \
