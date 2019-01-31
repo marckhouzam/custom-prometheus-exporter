@@ -332,7 +332,7 @@ metrics:
   type: gauge
   executions:
   - command: expr 111
-#    type: sh                  # Missing field should cause error
+#    type: sh                  # Missing field should trigger a default
     labels:
       order: first
 `
@@ -340,7 +340,8 @@ metrics:
 	defer removeFile(filename)
 
 	c := Config{ConfigFiles: []string{filename}}
-	assert.ErrorContains(t, c.ParseConfig(), "Missing field 'type' in 'executions' configuration")
+	assert.NilError(t, c.ParseConfig())
+	assert.Equal(t, *c.Exporters[0].Metrics[0].Executions[0].ExecutionType, defaultExecutionType)
 }
 
 func TestWrongMetricExecutionType(t *testing.T) {

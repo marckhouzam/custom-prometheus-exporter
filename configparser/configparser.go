@@ -12,6 +12,7 @@ import (
 const (
 	defaultEndpoint      = "/metrics"
 	defaultTimeout  uint = 1000
+	defaultExecutionType = "bash"
 )
 
 // Config is the structure that holds the configuration of the custom-prometheus-exporter
@@ -104,9 +105,9 @@ func (c *Config) verifyExporterConfig(exporter *ExporterConfig) error {
 		}
 
 		for j, execution := range metric.Executions {
+			// ExecutionType defaults to the bash shell
 			if execution.ExecutionType == "" {
-				return errors.New("Missing field 'type' in 'executions' configuration of metric " + string(i) +
-					" and execution " + string(j))
+				exporter.Metrics[i].Executions[j].ExecutionType = defaultExecutionType
 			}
 
 			if execution.ExecutionType != "sh" && execution.ExecutionType != "bash" &&

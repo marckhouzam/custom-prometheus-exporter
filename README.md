@@ -107,7 +107,7 @@ metrics:              # An array of metrics to be generated - MANDATORY
   executions:         # An array of executions to generate the metric - MANDATORY
   - type: sh || bash || tcsh || zsh
                       # The syntax used in the 'command' field must be
-                      #   compatible with the shell specified - MANDATORY
+                      #   compatible with the shell specified - OPTIONAL, defaults to bash
     command: string   # An sh command that will be run exactly as-specified - MANDATORY
                       #   Shell pipes (|) are allowed.
                       #   The result of the command must be the single
