@@ -150,12 +150,6 @@ Contributions are welcomed!  You can submit code or documentation Pull Requests,
 The code is written in [Go](https://tour.golang.org).  If you don't already have your Go development environment setup, start [here](https://golang.org/doc/install
 ).
 
-To compile the custom-prometheus-exporter you will also need to install the [go yaml package](https://github.com/go-yaml/yaml):
-
-```
-go get gopkg.in/yaml.v2
-```
-
 Then get and compile the code:
 ```
 git clone https://github.com/marckhouzam/custom-prometheus-exporter.git
